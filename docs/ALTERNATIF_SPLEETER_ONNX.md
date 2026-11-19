@@ -73,3 +73,26 @@ Dokumentasi resmi ONNX Runtime menyatakan AAR Android berisi `libonnxruntime.so`
 ## Keputusan
 
 Spleeter 5-stem adalah kandidat yang layak untuk prototipe bila pengguna menerima lima stem dan batas kualitasnya. Jika enam stem termasuk gitar merupakan syarat mutlak, kandidat ini tidak menggantikan Demucs 6S; kita perlu mencari model enam stem dengan hak bobot yang jelas atau mendapatkan izin yang sesuai.
+
+
+## Pemeriksaan kandidat enam-stem: BS-RoFormer SW
+
+Kandidat lain yang ditemukan adalah BS-RoFormer SW enam-stem. Urutan keluarannya sama dengan target awal: bass, drums, other, vocals, guitar, piano. Ada ekspor ONNX FP16 sekitar 336 MB dan FP32 sekitar 669 MB. Kontrak model memakai STFT eksternal dan potongan audio tetap sekitar empat detik; dimensi waktu tidak benar-benar dinamis.
+
+Namun **model ini tidak lolos pemeriksaan lisensi bobot**:
+- Model card ONNX menampilkan metadata MIT, tetapi teks README-nya sendiri menjelaskan bahwa bobot pretrained berasal dari rehost `jarredou/BS-ROFO-SW-Fixed` tanpa lisensi yang dinyatakan.
+- Pemilik rehost ONNX menyatakan tidak terlibat dalam pelatihan dan tidak memiliki informasi provenance bobot.
+- Diskusi teknis tentang provenance menyatakan tidak ada lisensi atau asal pelatih yang dapat diverifikasi; lisensi MIT arsitektur tidak memberikan hak otomatis atas bobot tersebut.
+
+Karena itu, label MIT pada metadata repositori ekspor tidak cukup untuk menyimpulkan bahwa bobotnya boleh digunakan. Kandidat ini tidak diaktifkan.
+
+Sumber yang diperiksa:
+- [Model card BS-RoFormer SW 6-stem ONNX](https://huggingface.co/elicwhite/bs-roformer-sw-6stem-onnx)
+- [Catatan provenance dan lisensi BS-RoFormer SW](https://github.com/openmirlab/bs-roformer-infer/issues/3)
+- [Panduan kebutuhan model BS-RoFormer pada INTERSECT](https://tucktuckg00se.github.io/INTERSECT/stem-separation/)
+
+### Kecocokan perangkat
+
+Dokumentasi implementasi desktop yang diperiksa menyebut kebutuhan sekitar 6 GB RAM bebas untuk BS-RoFormer SW dan sekitar 11 menit CPU untuk lagu tiga menit pada PC desktop 12-core. Ini bukan benchmark Android, tetapi sudah cukup untuk menandai risiko besar pada ponsel dengan RAM fisik total 6 GB. Ukuran bobot 336 MB juga jauh lebih besar daripada kandidat Spleeter 5-stem sekitar 98 MB.
+
+Kesimpulan: BS-RoFormer cocok secara jumlah stem, tetapi saat ini terhalang hak bobot yang tidak jelas dan risiko memori/performa. Jangan jadikan backend perangkat sasaran sebelum izin dan benchmark nyata tersedia.
