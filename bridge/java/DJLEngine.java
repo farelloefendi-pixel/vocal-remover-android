@@ -638,11 +638,15 @@ public final class DJLEngine {
                         }
                         if (selesai.get()) break;
                         long elapsed = (System.currentTimeMillis() - mulai) / 1000L;
-                        String stage = cancel.exists()
-                                ? "Menghentikan segmen " + currentChunk + " dari " + totalChunks
-                                : "Memproses segmen " + currentChunk + " dari " + totalChunks;
-                        String detail = "Segmen masih dikerjakan; waktu berjalan "
-                                + elapsed + " detik. Persentase bertambah setelah segmen selesai.";
+                        String stage = currentChunk == 0L
+                                ? "Memuat model Kim Vocal 2"
+                                : cancel.exists()
+                                    ? "Menghentikan segmen " + currentChunk + " dari " + totalChunks
+                                    : "Memproses segmen " + currentChunk + " dari " + totalChunks;
+                        String detail = currentChunk == 0L
+                                ? "Membuka sesi ONNX Runtime; waktu berjalan " + elapsed + " detik."
+                                : "Segmen masih dikerjakan; waktu berjalan " + elapsed
+                                    + " detik. Persentase bertambah setelah segmen selesai.";
                         writeStatus(status, "jalan", percent, stage, detail);
                     }
                 }
@@ -683,6 +687,8 @@ public final class DJLEngine {
         options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
 
         WavPcm16Writer[] writers = new WavPcm16Writer[2];
+        ProgressHeartbeat sessionHeartbeat = new ProgressHeartbeat(
+                status, cancel, 0L, chunks, 30);
         try (OrtSession session = ortEnvironment.createSession(modelPath, options);
              OrtSession.RunOptions runOptions = new OrtSession.RunOptions();
              java.io.RandomAccessFile inputFile = new java.io.RandomAccessFile(prepared, "r")) {
@@ -723,6 +729,7 @@ public final class DJLEngine {
             FloatBuffer tensorData = tensorMemory.asFloatBuffer();
             final float compensation = 1.009f;
 
+            sessionHeartbeat.close();
             activeRunOptions = runOptions;
             for (long chunk = 0; chunk < chunks; chunk++) {
                 final long currentChunk = chunk + 1L;
@@ -827,6 +834,7 @@ public final class DJLEngine {
             for (WavPcm16Writer writer : writers) writer.close();
             for (WavPcm16Writer writer : writers) writer.validate(total);
         } finally {
+            sessionHeartbeat.close();
             activeRunOptions = null;
             for (WavPcm16Writer writer : writers) {
                 if (writer != null) {
