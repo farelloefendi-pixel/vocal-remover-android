@@ -62,6 +62,13 @@ local function toast(teks)
   end }))
 end
 
+local function panjangLarik(a)
+  local n = 0
+  local ok = pcall(function() n = a.length end)
+  if not ok or type(n) ~= "number" then pcall(function() n = #a end) end
+  return n
+end
+
 local function dp(n)
   local d = 1
   pcall(function() d = ctx.getResources().getDisplayMetrics().density end)
@@ -431,7 +438,7 @@ function pilihAudio(path)
     local parent = folder.getParent()
     if parent then entries[#entries + 1] = { label = "Naik satu folder", path = tostring(parent), dir = true, up = true } end
   end
-  for i = 0, daftar.length - 1 do
+  for i = 0, panjangLarik(daftar) - 1 do
     local f = daftar[i]
     local name = tostring(f.getName())
     if name ~= "." and name ~= ".." and string.sub(name, 1, 1) ~= "." then
