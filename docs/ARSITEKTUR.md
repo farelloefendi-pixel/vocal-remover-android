@@ -57,7 +57,7 @@ Pola Lua direplikasi dari `main.lua` PPK referensi:
 1. `DJL.base` digunakan untuk mencari file mesin di folder ekstensi.
 2. `DJLEngine.dex` dan pustaka SO dipilih berdasarkan ABI.
 3. File disalin ke direktori cache privat.
-4. Kelas dimuat dengan `DexClassLoader(dexPath, optimizedDir, ortFolder, ctx.getClassLoader())`; `ortFolder` memuat `libonnxruntime.so` agar pemuatan native melalui `System.loadLibrary` dapat ditemukan.
+4. Kelas dimuat dengan `DexClassLoader(dexPath, optimizedDir, ortFolder, ctx.getClassLoader())`. Java menetapkan properti path eksplisit untuk `libonnxruntime.so` dan `libonnxruntime4j_jni.so` sebelum memanggil `OrtEnvironment.getEnvironment()`.
 5. Kelas disimpan pada `System.getProperties()` agar tidak dibuat ulang setiap kali fungsi dipanggil.
 6. Metode Java statis dipanggil menggunakan `getDeclaredMethod` dan `invoke`.
 7. Worker menulis status ke file; Lua membaca status melalui Handler.
