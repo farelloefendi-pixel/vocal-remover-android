@@ -28,7 +28,7 @@ Jieshuo / CSR
     STFT MDX / Bluestein FFT 7680
     susun tensor [1,4,3072,256]
     inferensi ONNX Runtime
-    iSTFT, overlap-add, kompensasi
+    iSTFT, Hann weighted overlap-add 25%, kompensasi
     tulis vocals.wav
     instrumental = mix - vocals
        |
