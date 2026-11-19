@@ -127,7 +127,40 @@ HTDemucs 6S bukan model pemisah instrumen tradisional. Rebab, suling, gender, sa
 Build CI mengompilasi C++ JNI, DEX, memeriksa signature JNI, memeriksa sintaks Lua, memverifikasi alignment ELF 16 KB, dan mengemas PPK development. Build berhasil bukan bukti runtime atau izin penggunaan model. Pemuatan di CSR, decode audio nyata, pemisahan enam stem, pembatalan, Vulkan/CPU, penggunaan memori, ekspor, dan aksesibilitas masih menunggu pengujian pada Redmi 13C Android 16.
 
 
-## 11. Jalur integrasi ONNX Runtime yang sedang dinilai
+
+### 11.1 Kontrak inferensi ONNX 6-stem dan pemrosesan streaming
+
+Model HTDemucs 6S ONNX yang sedang dievaluasi mempunyai kontrak tetap:
+- Input bernama mix, bentuk [1, 2, 343980], float32, stereo planar, 44.100 Hz.
+- Output bernama stems, bentuk [1, 6, 2, 343980], float32.
+- Urutan baris output: drums, bass, other, vocals, guitar, piano.
+- Panjang segmen 7,8 detik; overlap 25 persen (85.995 sampel); stride 257.985 sampel.
+
+Sumber rujukan: model card dan skrip infer.py pada repositori StemSplitio. Skrip tersebut melakukan zero-padding untuk segmen terakhir, menerapkan jendela transisi pada tepi segmen, lalu menormalisasi jumlah bobot overlap. Detail ini harus direplikasi, bukan diganti dengan pemotongan segmen tanpa blending.
+
+Implementasi Android tidak boleh menyalin pola referensi Python yang menampung seluruh output lagu dalam array [6, 2, totalSamples]; cara itu membuat RAM bertambah sebanding durasi lagu. Implementasi ponsel harus memakai overlap-add streaming:
+1. Baca satu segmen input dari file PCM siap-pakai, lalu susun tensor channel-first.
+2. Jalankan satu inferensi dan validasi nama serta dimensi output.
+3. Campurkan kontribusi segmen dengan jendela transisi ke buffer keluaran bergulir untuk enam stem.
+4. Tulis bagian buffer yang sudah tidak mungkin disentuh segmen berikutnya ke WAV sementara, kemudian pertahankan hanya ekor overlap untuk iterasi selanjutnya.
+5. Pada segmen terakhir, normalisasi bobot, tulis sisa buffer, tutup keenam WAV, lalu validasi header, ukuran, dan durasi.
+6. Batalkan secara kooperatif di antara segmen dan saat menulis; hapus keenam keluaran parsial jika batal atau gagal.
+
+Dengan cara ini, memori kerja audio dapat dibatasi pada satu input segmen, satu output segmen, buffer overlap enam stem, dan memori internal ONNX Runtime. Ini belum menjamin perangkat cukup kuat: alokasi internal model, thread pool, dan cache tetap harus diukur pada perangkat sasaran. Model FP16-weights tetap menghasilkan tensor float32 saat inferensi menurut model card; ukuran file 136 MB tidak boleh dianggap sebagai RAM yang dibutuhkan.
+
+### 11.2 Kriteria penerimaan ONNX Runtime
+
+- ORT Android ARM64 dan DEX dimuat melalui jalur classloader yang sama tanpa merusak aksesibilitas UI.
+- Sesi model dibuka dengan satu thread inferensi awal, optimisasi graph, dan CPU execution provider sebagai fallback wajib. NNAPI hanya opsi setelah uji perangkat membuktikan stabil dan akurat.
+- Uji tensor sintetis memverifikasi bentuk input/output dan nilai finite sebelum file audio digunakan.
+- Audio input mono diduplikasi ke stereo; multichannel dilipat ke stereo dengan aturan yang diuji. Resampling ke 44,1 kHz harus memiliki anti-aliasing dan mempertahankan durasi.
+- Uji audio nyata menghasilkan tepat enam WAV PCM stereo 44,1 kHz dengan panjang sama dan tanpa NaN/Inf.
+- Uji durasi 10 detik, 1 menit, dan 3 menit memeriksa lonjakan RAM, waktu, suhu, progres, pembatalan, serta file sementara.
+- Uji aksesibilitas memastikan progres tidak membanjiri pembaca layar, fokus tidak pindah ke area lain, dan tombol batal tetap dapat dijangkau.
+
+Status: kontrak dan batas memori sudah didokumentasikan; runtime ONNX, inferensi, dan writer streaming belum diimplementasikan. Model juga tetap dinonaktifkan karena konflik lisensi bobot belum selesai.
+
+## 12. Jalur integrasi ONNX Runtime yang sedang dinilai
 
 Kandidat enam stem ONNX tidak kompatibel langsung dengan JNI Demucs yang sekarang. Integrasi memerlukan runtime ONNX Android ARM64, pemuatan model ONNX, tensor input stereo 44,1 kHz, pemrosesan segmen sekitar 7,8 detik dengan overlap-add, dan penulisan enam keluaran WAV. Jalur ini belum diimplementasikan pada paket saat ini.
 
