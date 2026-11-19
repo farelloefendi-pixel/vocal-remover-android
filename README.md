@@ -6,7 +6,7 @@ Proyek **ekstensi CSR/Jieshuo** untuk memisahkan audio musik secara offline di A
 
 - Antarmuka dan pengendali: Lua.
 - Jembatan native: Java DEX yang dimuat melalui `DexClassLoader`.
-- Mesin pemisahan: C++ JNI, model Demucs v4 HTDemucs 6-stem.
+- Mesin C++ Demucs lama masih berupa prototipe; kandidat berikutnya adalah integrasi ONNX Runtime Android untuk HTDemucs 6-stem.
 - Hasil: vocals, drums, bass, other, guitar, dan piano.
 - Pemrosesan berjalan pada worker Java/C++, satu pekerjaan pada satu waktu.
 - Progres, pembatalan, pemulihan pekerjaan, dan pembersihan file sementara.
@@ -33,7 +33,7 @@ Build terbaru **berhasil** pada 19 November 2026. Artefak `vocal-remover-csr-dev
 
 ## Status model
 
-Mesin HTDemucs 6-stem dipertahankan sebagai prototipe kode, tetapi penggunaan bobotnya ditahan karena pemelihara Demucs menyatakan bobot tidak tercakup MIT dan hanya disediakan untuk tujuan ilmiah. Pengunduhan otomatis dinonaktifkan. Ekspor ONNX yang mengklaim MIT juga belum otomatis menyelesaikan persoalan hak bobot asalnya. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan alternatif yang sedang dinilai.
+Mesin C++ HTDemucs yang ada belum menjadi jalur pemisahan aktif. Kandidat HTDemucs 6S ONNX (136 MB, enam stem) sedang dinilai, tetapi belum diintegrasikan atau diunduh karena pernyataan MIT pada ekspor belum cukup untuk memastikan hak bobot dasar. Integrasi ONNX memerlukan runtime dan pipeline inferensi yang berbeda. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan [perbandingan kandidat](docs/KEPUTUSAN_MODEL.md).
 
 ## Batas validasi
 
