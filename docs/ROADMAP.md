@@ -26,7 +26,7 @@
 - [x] Implementasikan Bluestein FFT 7680 berbasis radix-2 di Java; validasi numerik masih berjalan.
 - [x] Implementasikan STFT periodic Hann, center=True, reflect padding, dan normalisasi sesuai referensi UVR/MDX.
 - [x] Implementasikan pemetaan tensor empat bidang real/imaginary.
-- [ ] Terapkan penanganan bin awal sesuai referensi model.
+- [x] Terapkan penanganan bin awal sesuai referensi model (bin 0–2 dinolkan sebelum inferensi).
 - [x] Integrasikan inferensi ONNX satu segmen dengan validasi node dan bentuk tensor.
 - [x] Implementasikan iSTFT dan normalisasi envelope.
 - [x] Implementasikan weighted overlap-add 25%, padding batas, dan penyambungan segmen tanpa kehilangan atau duplikasi sampel.
@@ -61,4 +61,4 @@
 
 ## Status saat ini
 
-Kontrak identitas Kim Vocal 2, checksum, dan smoke test tensor sudah disiapkan. Mesin lama diblokir. Pipeline DSP awal, direct-DFT, round-trip, model ONNX CPU smoke inference, kompilasi Java/D8, dan sintaks Lua telah lulus CI. Paket PPK kandidat ARM64 sudah berhasil dibangun dan arsipnya tervalidasi. SHA-256 PPK: `8e3220e117e7dbcfbe420f581306e55f3998c08f104ab1c9f3165a2616592392`. Belum ada hasil uji pemisahan audio nyata atau uji perangkat.
+Kontrak identitas Kim Vocal 2, checksum, inferensi ONNX CPU sintetis, dan kompilasi Java/D8 telah disiapkan. Mesin lama diblokir. Pipeline DSP Java mencakup Bluestein FFT, STFT/iSTFT, penghilangan tiga bin frekuensi terendah, overlap-add 25%, kompensasi, dan dua WAV. Uji direct-DFT, round-trip, serta cakupan overlap-add telah lulus pada CI sebelumnya. Perubahan bin 0–2 sedang divalidasi ulang oleh workflow CI terbaru. Paket PPK kandidat ARM64 sudah berhasil dibangun sebelumnya dan arsipnya tervalidasi. SHA-256 PPK sebelumnya: `8e3220e117e7dbcfbe420f581306e55f3998c08f104ab1c9f3165a2616592392`. Belum ada hasil uji pemisahan audio nyata atau uji perangkat.
