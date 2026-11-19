@@ -246,7 +246,7 @@ public final class DJLEngine {
 
     public static String infoMesin() {
         if (!libraryLoaded) return "Mesin native belum dimuat";
-        return nativeComputeInfo(1, false);
+        return "Mesin siap. Vulkan diperiksa saat pemisahan dimulai; komputasi CPU dibatasi maksimal tiga thread.";
     }
 
     /** Matches the three-String asynchronous entry point called by MD.mulai(). */
@@ -271,6 +271,10 @@ public final class DJLEngine {
         final Thread worker = new Thread(new Runnable() {
             @Override
             public void run() {
+                try {
+                    android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+                } catch (Throwable ignored) {
+                }
                 kerjakan(audioPath, workDir, id);
             }
         }, "VocalRemover-" + id);
