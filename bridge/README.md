@@ -63,7 +63,7 @@ Native methods mengikuti tabel registrasi upstream:
 1. Java mendekode audio dengan MediaExtractor/MediaCodec.
 2. Decoder menulis PCM float32 interleaved ke file sementara secara bertahap.
 3. Jalur Demucs C++ lama masih prototipe dan tidak digunakan untuk kandidat ONNX.
-4. Jalur ONNX baru memiliki smoke test satu segmen; inferensi streaming seluruh lagu dan writer enam WAV belum dibuat.
+4. Jalur ONNX kini memiliki smoke test satu segmen serta kode inferensi streaming dan writer tujuh WAV; kompilasi dan uji runtime belum diverifikasi.
 5. Model masih dinonaktifkan sampai hak bobot jelas.
 
 ## Model dan lisensi
