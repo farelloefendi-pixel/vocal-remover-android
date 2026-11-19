@@ -549,6 +549,26 @@ public final class DJLEngine {
             return frames;
         }
 
+        void validate(long expectedFrames) throws IOException {
+            long expectedBytes = 44L + expectedFrames * 4L;
+            if (frames != expectedFrames || !file.isFile()
+                    || file.length() != expectedBytes) {
+                throw new IOException("Ukuran atau durasi WAV hasil tidak sesuai");
+            }
+            byte[] header = new byte[44];
+            try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "r")) {
+                raf.readFully(header);
+            }
+            ByteBuffer h = ByteBuffer.wrap(header).order(ByteOrder.LITTLE_ENDIAN);
+            String riff = new String(header, 0, 4, StandardCharsets.US_ASCII);
+            String wave = new String(header, 8, 4, StandardCharsets.US_ASCII);
+            String data = new String(header, 36, 4, StandardCharsets.US_ASCII);
+            if (!"RIFF".equals(riff) || !"WAVE".equals(wave) || !"data".equals(data)
+                    || h.getInt(24) != 44100 || h.getInt(40) != expectedFrames * 4L) {
+                throw new IOException("Header WAV hasil tidak valid");
+            }
+        }
+
         @Override
         public void close() throws IOException {
             if (closed) return;
@@ -729,9 +749,7 @@ public final class DJLEngine {
             }
             for (WavPcm16Writer writer : writers) writer.close();
             for (WavPcm16Writer writer : writers) {
-                if (writer.frameCount() != total) {
-                    throw new IOException("Durasi WAV hasil tidak sama dengan audio sumber");
-                }
+                writer.validate(total);
             }
         } finally {
             activeRunOptions = null;
