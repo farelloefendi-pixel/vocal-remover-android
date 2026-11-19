@@ -63,7 +63,7 @@ public final class DJLEngine {
             if (parent == null) {
                 return "GALAT|Folder mesin tidak ditemukan";
             }
-            modelPath = new File(parent, "htdemucs_6s.safetensors").getAbsolutePath();
+            modelPath = new File(parent, "5c90dfd2.safetensors").getAbsolutePath();
             String info = nativeComputeInfo(1, false);
             return "OK|" + (info == null ? "Mesin C++ siap" : info);
         } catch (Throwable error) {
@@ -81,7 +81,7 @@ public final class DJLEngine {
             return "GALAT|Parameter pekerjaan tidak lengkap";
         }
         if (modelPath == null || !new File(modelPath).isFile()) {
-            return "GALAT|Model htdemucs_6s.safetensors belum ditemukan di folder mesin";
+            return "GALAT|Model 5c90dfd2.safetensors belum ditemukan di folder mesin";
         }
         if (!RUNNING.compareAndSet(false, true)) {
             return "GALAT|Pekerjaan pemisahan lain masih berjalan";
