@@ -375,7 +375,8 @@ function M.hapusHasil(id)
   File(kerja .. "/status_" .. id .. ".txt").delete()
   local last = M.terakhir()
   if last and last.id == id then File(kerja .. "/terakhir.txt").delete() end
-  M.hapusAktif()
+  local active = M.aktif()
+  if active and active.id == id then M.hapusAktif() end
   return true
 end
 
@@ -394,7 +395,7 @@ end
 function M.simpanTerakhir(id, audioPath)
   local f = io.open(kerja .. "/terakhir.txt", "wb")
   if not f then return false end
-  f:write(table.concat({ id, audioPath or "" }, "\\t"))
+  f:write(table.concat({ id, audioPath or "" }, "\t"))
   f:close()
   return true
 end
@@ -402,7 +403,7 @@ end
 function M.terakhir()
   local isi = berkas(kerja .. "/terakhir.txt")
   if not isi then return nil end
-  local id, path = string.match(isi, "^([^\\t]+)\\t([^\\n]*)")
+  local id, path = string.match(isi, "^([^\t]+)\t([^\n]*)")
   if not id then return nil end
   return { id = id, path = path }
 end
