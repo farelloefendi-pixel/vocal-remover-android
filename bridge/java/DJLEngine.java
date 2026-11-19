@@ -235,6 +235,11 @@ public final class DJLEngine {
         }
     }
 
+    public static String infoMesin() {
+        if (!libraryLoaded) return "Mesin native belum dimuat";
+        return nativeComputeInfo(1, false);
+    }
+
     /** Matches the three-String asynchronous entry point called by MD.mulai(). */
     public static String mulai(final String audioPath, final String workDir, final String id) {
         if (!libraryLoaded) {
