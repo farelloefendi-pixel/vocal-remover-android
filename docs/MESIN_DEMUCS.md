@@ -72,18 +72,23 @@ Petunjuk upstream menyebut:
 
 Konfigurasi dan binary belum dibangun atau diuji untuk proyek CSR ini. Perlu validasi build sebelum menambahkan klaim dukungan perangkat.
 
-## 8. Model dan lisensi
+## 8. Model, checksum, dan lisensi
 
-README upstream menyebut bobot htdemucs_6s v4.1.0 berukuran sekitar 55 MB dan berlisensi MIT, dengan checksum SHA-256:
+Model upstream yang dipakai dalam prototipe:
+- Model: Demucs v4.1.0 HTDemucs 6-stem.
+- Bobot: `5c90dfd2.safetensors`.
+- Ukuran yang dilaporkan: sekitar 55 MB.
+- SHA-256 yang dicantumkan upstream:
+  `d2a1745f0744721f6b8ca5bf469b67c651ea5ed1b52998cab033b2158609d411`.
 
-d2a1745f0744721f6b8ca5bf469b67c651ea5ed1b52998cab033b2158609d411
-
-Sumber bobot upstream:
+Sumber bobot:
 https://huggingface.co/adefossez/HTDemucs-6s/resolve/3c5ee475be622df764938de97e4281a7b07ffa58/5c90dfd2.safetensors
 
-Nama berkas yang diharapkan bridge adalah `5c90dfd2.safetensors`. Bobot tidak akan disimpan langsung di Git. Saat digunakan, bridge memeriksa SHA-256 sebelum memuat model.
+Penting untuk memisahkan lisensi kode dari hak atas bobot. README repositori Android turunan menyebut bobot MIT, tetapi pemelihara Demucs asli menyatakan bahwa bobot pretrained tidak tercakup MIT dan hanya disediakan untuk tujuan ilmiah. Pernyataan pemelihara model asli menjadi dasar kehati-hatian proyek ini.
 
-Berkas lisensi upstream menyebut mesin repository MIT dengan atribusi Jeroen Paauwe dan Sevag H; bagian src/demucs memiliki berkas lisensi MIT tersendiri. README upstream menyebut bobot Demucs MIT dan Eigen MPL 2.0. Salinan teks lisensi dan atribusi seluruh dependensi tetap harus diperiksa dan disertakan saat paket distribusi dibuat.
+Akibatnya, unduhan dan pemakaian bobot HTDemucs dinonaktifkan dalam adapter CSR. Kode JNI dan jalur inferensi tetap disimpan sebagai prototipe teknis, tetapi paket PPK saat ini hanya development dan tidak menghasilkan stem.
+
+Untuk rincian bukti, alternatif, dan status audit, lihat `docs/LISENSI_MODEL.md`.
 
 ## 9. Batas kualitas model
 
