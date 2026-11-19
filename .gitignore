@@ -1,0 +1,28 @@
+# Android / Gradle
+.gradle/
+**/build/
+local.properties
+*.iml
+.idea/
+
+# Native build
+.cxx/
+.externalNativeBuild/
+**/obj/
+**/libs/
+
+# IDE and OS
+.DS_Store
+Thumbs.db
+
+# Generated audio and temporary model data
+*.wav
+*.flac
+*.mp3
+*.pcm
+*.raw
+*.tmp
+*.safetensors
+*.onnx
+*.tflite
+*.bin
