@@ -168,13 +168,18 @@ public final class DJLEngine {
             checkCancelled(cancel);
 
             ProgressListener prepareProgress = new ProgressListener() {
+                private long lastWrite;
                 @Override
                 public boolean onProgress(float fraction, String stage) {
                     if (cancel.exists()) {
                         return false;
                     }
-                    int percent = 15 + Math.round(clamp(fraction) * 15f);
-                    writeStatus(status, "jalan", percent, "Menyiapkan audio", safeStage(stage));
+                    long now = System.currentTimeMillis();
+                    if (now - lastWrite >= 500 || fraction >= 1f) {
+                        int percent = 15 + Math.round(clamp(fraction) * 15f);
+                        writeStatus(status, "jalan", percent, "Menyiapkan audio", safeStage(stage));
+                        lastWrite = now;
+                    }
                     return true;
                 }
             };
@@ -193,13 +198,18 @@ public final class DJLEngine {
             }
 
             ProgressListener separationProgress = new ProgressListener() {
+                private long lastWrite;
                 @Override
                 public boolean onProgress(float fraction, String stage) {
                     if (cancel.exists()) {
                         return false;
                     }
-                    int percent = 30 + Math.round(clamp(fraction) * 70f);
-                    writeStatus(status, "jalan", percent, "Memisahkan audio", safeStage(stage));
+                    long now = System.currentTimeMillis();
+                    if (now - lastWrite >= 500 || fraction >= 1f) {
+                        int percent = 30 + Math.round(clamp(fraction) * 70f);
+                        writeStatus(status, "jalan", percent, "Memisahkan audio", safeStage(stage));
+                        lastWrite = now;
+                    }
                     return true;
                 }
             };
