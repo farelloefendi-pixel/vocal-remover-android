@@ -1,6 +1,6 @@
 # Strategi kualitas dan arsitektur pemisahan
 
-Status: rancangan teknis untuk tahap implementasi; belum merupakan fitur yang sudah berjalan atau tervalidasi pada perangkat.
+Status: jalur inferensi streaming dan writer tujuh WAV sudah ditulis dalam Java; belum dibuktikan melalui build CI terbaru atau uji runtime pada perangkat. Model tetap dikunci di adapter Lua sampai dasar lisensi bobot dipastikan.
 
 ## Sasaran produk
 
@@ -13,9 +13,9 @@ Produk harus menyediakan:
 
 ## Temuan penting dari referensi model
 
-Referensi inferensi HTDemucs 6S ONNX menetapkan input stereo float32 44,1 kHz dengan bentuk [1,2,343980] dan keluaran [1,6,2,343980]. Satu segmen adalah 7,8 detik. Implementasi referensi memakai overlap 25%, stride 257.985 sampel, jendela transisi triangular, dan normalisasi bobot overlap. Urutan keluaran adalah drums, bass, other, vocals, guitar, piano.
+Referensi inferensi HTDemucs 6S ONNX menetapkan input stereo float32 44,1 kHz dengan bentuk [1,2,343980] dan keluaran [1,6,2,343980]. Satu segmen adalah 7,8 detik. Implementasi referensi memakai overlap 25%, stride 257.985 sampel, jendela fade linear komplementer (0→1 di awal, 1→0 di akhir), dan normalisasi bobot overlap. Urutan keluaran adalah drums, bass, other, vocals, guitar, piano.
 
-Implementasi Android wajib mengikuti kontrak ini, bukan memproses seluruh lagu sebagai satu tensor besar. Untuk memori yang lebih terkendali, rancangan produksi harus memakai buffer bergulir: decode audio bertahap, inference satu segmen per giliran, overlap-add pada wilayah yang masih aktif, lalu tulis sampel yang tidak mungkin disentuh segmen berikutnya ke WAV. Hanya buffer segmen dan jendela overlap yang dipertahankan di RAM; hasil ditulis bertahap ke penyimpanan.
+Implementasi Android yang ditulis mengikuti kontrak ini tanpa menampung seluruh lagu sebagai satu tensor. Worker mendekode audio bertahap, menyiapkan stereo 44,1 kHz, menjalankan satu segmen per giliran, melakukan overlap-add pada buffer bergulir, lalu menulis bagian yang sudah final ke WAV. Penggunaan RAM dan ketepatan blending masih harus diverifikasi dengan audio nyata.
 
 Sumber referensi:
 - https://huggingface.co/StemSplitio/htdemucs-6s-onnx/blob/main/infer.py
@@ -35,17 +35,17 @@ Mode Karaoke tidak boleh dinyatakan lebih baik sebelum uji dengar buta dan pengu
 
 - Ukuran file bobot bukan ukuran RAM saat inferensi. Varian bobot FP16 dapat mengurangi ukuran unduhan tetapi referensi penerbit menyatakan kebutuhan RAM dan latensi inferensi tetap hampir sama karena komputasi berjalan float32.
 - Angka sekitar 1,1 GB RAM per sesi yang dilaporkan penerbit pada Apple M4 Pro bukan benchmark Redmi 13C. Ukur peak RSS pada perangkat sasaran dengan Android 16, aplikasi CSR, dan screen reader tetap aktif.
-- Mulai dengan CPUExecutionProvider dan satu thread inference yang konservatif. Uji NNAPI sebagai opsi terpisah; gunakan hanya jika benar-benar didukung perangkat, stabil, dan hasil numeriknya setara. CPU fallback wajib tersedia.
+- Implementasi awal memakai CPU execution provider, dua thread intra-op dan satu thread inter-op. Uji NNAPI sebagai opsi terpisah; gunakan hanya jika benar-benar didukung perangkat, stabil, dan hasil numeriknya setara. CPU fallback wajib tersedia.
 - Jangan membuat enam array keluaran sepanjang lagu di RAM. Streaming overlap-add dan WAV writer harus digunakan.
 - Batalkan pekerjaan secara kooperatif di antara segmen, tutup session, file, codec, dan hapus file sementara saat batal atau gagal.
 - UI CSR tidak boleh melakukan inference atau I/O berat pada thread UI. Kemajuan diumumkan dengan interval terbatas agar screen reader tidak dibanjiri pengumuman.
 
 ## Berkas instrumental dan integritas audio
 
-- Simpan keenam stem sebagai WAV stereo dengan sample rate tetap 44.100 Hz pada tahap model.
-- Untuk instrumental, jumlahkan lima stem non-vokal secara streaming setelah hasil inference tersedia. Pertahankan headroom agar penjumlahan tidak clipping; jangan melakukan normalisasi independen per stem karena dapat merusak keseimbangan campuran.
+- Kode saat ini menulis keenam stem sebagai WAV PCM 16-bit stereo 44.100 Hz, dengan frame count sama seperti berkas PCM hasil resampling.
+- Kode saat ini menjumlahkan lima stem non-vokal setelah overlap-add, lalu menulis instrumental PCM 16-bit. Nilai di luar rentang PCM16 dipotong; peak/headroom analysis dan limiter global masih menjadi pekerjaan kualitas berikutnya. Tidak ada normalisasi loudness independen per stem.
 - Jika keluaran sumber awal memiliki sample rate lain, kembalikan semua keluaran ke sample rate sumber dengan resampler yang sama dan panjang sampel yang dikunci ke durasi sumber.
-- Periksa puncak, clipping, sampel non-finite, ukuran file, durasi, dan keselarasan awal/akhir sebelum menandai pekerjaan selesai.
+- Kode memeriksa nilai output non-finite dan frame count WAV. Pemeriksaan peak/clipping, keselarasan awal/akhir, dan pengukuran loudness masih harus ditambahkan sebelum rilis.
 - Simpan file hasil sementara dengan nama sementara; ubah menjadi nama final hanya setelah seluruh file tervalidasi.
 
 ## Pengujian penerimaan
