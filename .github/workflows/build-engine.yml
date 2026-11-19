@@ -80,6 +80,7 @@ jobs:
             --lib "$ANDROID_HOME/platforms/android-35/android.jar" \
             --output dist build-java/classes/DJLEngine*.class build-ort/unpacked/classes.jar
           test -s dist/classes.dex
+          test ! -e dist/classes2.dex
           mv dist/classes.dex dist/DJLEngine.dex
           "$ANDROID_HOME/build-tools/35.0.0/dexdump" -l plain dist/DJLEngine.dex > dist/DEX_CLASSES.txt
           grep -Fq "Lai/onnxruntime/OrtEnvironment;" dist/DEX_CLASSES.txt
