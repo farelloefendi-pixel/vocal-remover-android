@@ -35,7 +35,7 @@ local kelas, pesan = Bridge.siapkan()
 | `batal(String workDir, String jobId)` | Membuat marker pembatalan dan meminta cancel native |
 | `hidup(String jobId)` | Memeriksa worker |
 | `infoMesin()` | Informasi konfigurasi runtime |
-| `ujiModelEnamStem(String path)` | Membuka model ONNX, memeriksa nama dan bentuk tensor, lalu menjalankan inferensi uji satu segmen |
+| `ujiModelEnamStem(String path)` | Smoke test lama HTDemucs; harus diganti dengan pemeriksaan metadata dan inferensi satu segmen Kim Vocal 2 sebelum rilis |
 
 Empat metode inti `muat/mulai/batal/hidup` mempertahankan kontrak PPK referensi. Metode tambahan mengelola model dan informasi mesin.
 
@@ -63,8 +63,8 @@ Native methods mengikuti tabel registrasi upstream:
 1. Java mendekode audio dengan MediaExtractor/MediaCodec.
 2. Decoder menulis PCM float32 interleaved ke file sementara secara bertahap.
 3. Jalur Demucs C++ lama masih prototipe dan tidak digunakan untuk kandidat ONNX.
-4. Jalur ONNX kini memiliki smoke test satu segmen serta kode inferensi streaming dan writer tujuh WAV; kompilasi dan uji runtime belum diverifikasi.
-5. Model masih dinonaktifkan sampai hak bobot jelas.
+4. Jalur ONNX yang ada masih khusus HTDemucs dan tidak kompatibel dengan Kim Vocal 2. Implementasi MDX-Net memerlukan STFT/iSTFT di luar graph, tensor kompleks empat bidang, inferensi per segmen, overlap-add, dan writer dua WAV.
+5. Model Kim Vocal 2 masih dinonaktifkan sampai implementasi MDX-Net selesai dan lolos validasi.
 
 ## Model dan lisensi
 
