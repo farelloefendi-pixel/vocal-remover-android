@@ -359,7 +359,7 @@ end
 function M.statusMesin()
   local kls, pesan = M.siapkan()
   if not kls then return false, pesan end
-  local info = M.panggil(kls, "nativeComputeInfo", 2, { "1", "false" })
+  local info = M.panggil(kls, "infoMesin", 0, {})
   return true, pesan .. " " .. tostring(info)
 end
 
