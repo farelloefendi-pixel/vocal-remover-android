@@ -43,10 +43,12 @@ CSR / Jieshuo
         |
         v
   libdjl64.so (C++ / JNI)
-    - prepare stereo float32 44,1 kHz
-    - inferensi HTDemucs 6S
-    - Vulkan bila tersedia, CPU fallback
-    - enam WAV
+    - fold channel dan resampling stereo float32 44,1 kHz
+
+  ONNX Runtime Android (Java)
+    - inferensi CPU satu segmen 7,8 detik
+    - overlap-add streaming enam stem
+    - enam WAV stem dan satu WAV instrumental
 ```
 
 ## 4. Kesesuaian dengan PPK referensi
@@ -148,8 +150,8 @@ Implementasi Android sekarang memakai overlap-add streaming dan tidak menampung 
 2. Jalankan satu inferensi dan validasi nama serta dimensi output.
 3. Campurkan kontribusi segmen dengan jendela transisi ke buffer keluaran bergulir untuk enam stem.
 4. Tulis bagian buffer yang sudah tidak mungkin disentuh segmen berikutnya ke WAV sementara, kemudian pertahankan hanya ekor overlap untuk iterasi selanjutnya.
-5. Pada segmen terakhir, normalisasi bobot, tulis sisa buffer, tutup keenam WAV, lalu validasi header, ukuran, dan durasi.
-6. Batalkan secara kooperatif di antara segmen dan saat menulis; hapus keenam keluaran parsial jika batal atau gagal.
+5. Pada segmen terakhir, normalisasi bobot, tulis sisa buffer, tutup ketujuh WAV, lalu validasi header, ukuran, dan durasi.
+6. Batalkan secara kooperatif di antara segmen dan saat menulis; hapus ketujuh keluaran parsial jika batal atau gagal.
 
 Dengan cara ini, memori kerja audio dapat dibatasi pada satu input segmen, satu output segmen, buffer overlap enam stem, dan memori internal ONNX Runtime. Ini belum menjamin perangkat cukup kuat: alokasi internal model, thread pool, dan cache tetap harus diukur pada perangkat sasaran. Model FP16-weights tetap menghasilkan tensor float32 saat inferensi menurut model card; ukuran file 136 MB tidak boleh dianggap sebagai RAM yang dibutuhkan.
 
@@ -159,7 +161,7 @@ Dengan cara ini, memori kerja audio dapat dibatasi pada satu input segmen, satu 
 - Sesi model dibuka dengan satu thread inferensi awal, optimisasi graph, dan CPU execution provider sebagai fallback wajib. NNAPI hanya opsi setelah uji perangkat membuktikan stabil dan akurat.
 - Uji tensor sintetis memverifikasi bentuk input/output dan nilai finite sebelum file audio digunakan.
 - Audio input mono diduplikasi ke stereo; multichannel dilipat ke stereo dengan aturan yang diuji. Resampling ke 44,1 kHz harus memiliki anti-aliasing dan mempertahankan durasi.
-- Uji audio nyata menghasilkan tepat enam WAV PCM stereo 44,1 kHz dengan panjang sama dan tanpa NaN/Inf.
+- Uji audio nyata menghasilkan tepat enam WAV stem ditambah instrumental PCM stereo 44,1 kHz dengan panjang sama dan tanpa NaN/Inf.
 - Uji durasi 10 detik, 1 menit, dan 3 menit memeriksa lonjakan RAM, waktu, suhu, progres, pembatalan, serta file sementara.
 - Uji aksesibilitas memastikan progres tidak membanjiri pembaca layar, fokus tidak pindah ke area lain, dan tombol batal tetap dapat dijangkau.
 
