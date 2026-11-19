@@ -266,7 +266,7 @@ public final class DJLEngine {
     public static String infoMesin() {
         if (!libraryLoaded) return "Mesin native belum dimuat";
         if (ortEnvironment == null) return "ONNX Runtime belum siap";
-        return "ONNX Runtime Android berhasil dimuat. Mesin C++ lama masih prototipe; inferensi ONNX belum diaktifkan.";
+        return "ONNX Runtime Android siap. Pemisahan memakai inferensi ONNX streaming; model tetap menunggu izin aktivasi.";
     }
 
     public static synchronized String ujiModelEnamStem(String path) {
@@ -345,7 +345,7 @@ public final class DJLEngine {
             return "GALAT|Parameter pekerjaan tidak lengkap";
         }
         if (modelPath == null || !new File(modelPath).isFile()) {
-            return "GALAT|Model 5c90dfd2.safetensors belum ditemukan di folder mesin";
+            return "GALAT|Model ONNX enam stem belum ditemukan di folder mesin";
         }
         if (DOWNLOADING.get()) {
             return "GALAT|Model sedang diunduh";
@@ -540,6 +540,10 @@ public final class DJLEngine {
             return (short) Math.round(value * 32767f);
         }
 
+        long frameCount() {
+            return frames;
+        }
+
         @Override
         public void close() throws IOException {
             if (closed) return;
@@ -715,6 +719,12 @@ public final class DJLEngine {
                 int percent = 30 + (int) ((chunk + 1L) * 70L / chunks);
                 writeStatus(status, "jalan", percent, "Memisahkan audio",
                         "Segmen " + (chunk + 1L) + " dari " + chunks);
+            }
+            for (WavPcm16Writer writer : writers) writer.close();
+            for (WavPcm16Writer writer : writers) {
+                if (writer.frameCount() != total) {
+                    throw new IOException("Durasi WAV hasil tidak sama dengan audio sumber");
+                }
             }
         } finally {
             activeRunOptions = null;
