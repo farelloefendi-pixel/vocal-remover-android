@@ -136,12 +136,13 @@ Build CI mengompilasi C++ JNI, DEX, memeriksa signature JNI, memeriksa sintaks L
 Model HTDemucs 6S ONNX yang sedang dievaluasi mempunyai kontrak tetap:
 - Input bernama mix, bentuk [1, 2, 343980], float32, stereo planar, 44.100 Hz.
 - Output bernama stems, bentuk [1, 6, 2, 343980], float32.
+- Model yang dipatok untuk uji: `htdemucs_6s_fp16weights.onnx`, 136 MB, SHA-256 `7ce55792e2231c93fbf92de95f5fd5b3a5e6c89f7db690dfd693e8f1dce56869`.
 - Urutan baris output: drums, bass, other, vocals, guitar, piano.
-- Panjang segmen 7,8 detik; overlap 25 persen (85.995 sampel); stride 257.985 sampel.
+- Panjang segmen 7,8 detik; overlap 25 persen (85.995 sampel); stride 257.985 sampel. Jendela referensi memakai fade linear 0→1 pada awal dan 1→0 pada akhir segmen, bukan jendela Hann.
 
 Sumber rujukan: model card dan skrip infer.py pada repositori StemSplitio. Skrip tersebut melakukan zero-padding untuk segmen terakhir, menerapkan jendela transisi pada tepi segmen, lalu menormalisasi jumlah bobot overlap. Detail ini harus direplikasi, bukan diganti dengan pemotongan segmen tanpa blending.
 
-Implementasi Android tidak boleh menyalin pola referensi Python yang menampung seluruh output lagu dalam array [6, 2, totalSamples]; cara itu membuat RAM bertambah sebanding durasi lagu. Implementasi ponsel harus memakai overlap-add streaming:
+Implementasi Android sekarang memakai overlap-add streaming dan tidak menampung seluruh output lagu dalam array [6, 2, totalSamples]:
 1. Baca satu segmen input dari file PCM siap-pakai, lalu susun tensor channel-first.
 2. Jalankan satu inferensi dan validasi nama serta dimensi output.
 3. Campurkan kontribusi segmen dengan jendela transisi ke buffer keluaran bergulir untuk enam stem.
@@ -161,7 +162,7 @@ Dengan cara ini, memori kerja audio dapat dibatasi pada satu input segmen, satu 
 - Uji durasi 10 detik, 1 menit, dan 3 menit memeriksa lonjakan RAM, waktu, suhu, progres, pembatalan, serta file sementara.
 - Uji aksesibilitas memastikan progres tidak membanjiri pembaca layar, fokus tidak pindah ke area lain, dan tombol batal tetap dapat dijangkau.
 
-Status: kontrak dan batas memori sudah didokumentasikan; runtime ONNX, inferensi, dan writer streaming belum diimplementasikan. Model juga tetap dinonaktifkan karena konflik lisensi bobot belum selesai.
+Status: runtime ONNX, pembukaan sesi, inferensi per segmen, overlap-add streaming, writer enam WAV, dan writer instrumental sudah ditulis. Metode smoke test juga memeriksa bentuk tensor serta nilai finite. Semua ini masih menunggu kompilasi CI dan pengujian runtime nyata. Model tetap dinonaktifkan karena dasar lisensi bobot ONNX hasil konversi belum dapat dipastikan.
 
 ## 12. Jalur integrasi ONNX Runtime yang sedang dinilai
 
@@ -169,6 +170,6 @@ Kandidat enam stem ONNX tidak kompatibel langsung dengan JNI Demucs yang sekaran
 
 ONNX Runtime Android 1.32.0 kini ditambahkan sebagai dependensi AAR resmi Maven Central. Workflow mengambil versi yang dipatok, mengekstrak kelas Java dan pustaka ARM64, menggabungkan kelas API ONNX ke DEX, serta memasukkan libonnxruntime.so ke paket. DexClassLoader diberi jalur pencarian pustaka native privat sehingga API Java ONNX Runtime dapat menemukan libonnxruntime.so. DJLEngine menetapkan jalur kedua pustaka native secara eksplisit sebelum memanggil OrtEnvironment.getEnvironment(). Metode ujiModelEnamStem membuka sesi ONNX, memastikan node mix/stems, menjalankan tensor nol berukuran [1,2,343980], lalu memeriksa 4.127.760 nilai output float agar finite. Ini adalah smoke test satu segmen, bukan pemisahan lagu nyata.
 
-Tahap ini baru mengintegrasikan dan menginisialisasi runtime, belum membuka model atau menjalankan inferensi. Mesin C++ lama masih dipertahankan sebagai prototipe dan bukan jalur inferensi ONNX. Model ONNX FP16-weights sekitar 136 MB tetap harus diverifikasi checksum dan hak distribusinya. Kebutuhan RAM serta kecepatan di Apple M4 Pro yang dilaporkan penerbit tidak dapat digeneralisasi ke Redmi 13C.
+Tahap kode berikutnya kini mencakup pembukaan sesi model, validasi nama dan bentuk tensor, inferensi satu segmen, pemrosesan streaming seluruh durasi, penulisan WAV enam stem, dan instrumental. Mesin C++ lama hanya dipakai untuk menyiapkan/resampling PCM; inferensi tidak lagi memakai model safetensors atau nativeSeparate. Model ONNX FP16-weights sekitar 136 MB diverifikasi dengan SHA-256 yang dipatok, tetapi hak distribusi dan penggunaan komersialnya tetap harus dipastikan. Kebutuhan RAM serta kecepatan di Apple M4 Pro yang dilaporkan penerbit tidak dapat digeneralisasi ke Redmi 13C.
 
 CI memeriksa keberadaan kelas OrtEnvironment di DEX, memastikan kedua pustaka ONNX Runtime berarsitektur AArch64, dan memeriksa alignment halaman ELF 16 KB pada keduanya. Pemeriksaan tersebut hanya validasi paket/kompilasi; belum membuktikan runtime dapat dimuat di CSR pada perangkat. Sebelum jalur ONNX dinyatakan siap, build dan uji perangkat harus membuktikan pembukaan model, satu inferensi uji, pemrosesan file audio panjang secara bertahap, enam WAV yang valid, pembatalan tanpa file rusak, dan pembersihan file sementara. Pengujian perangkat nyata tetap wajib.
