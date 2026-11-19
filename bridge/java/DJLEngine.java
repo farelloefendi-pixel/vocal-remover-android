@@ -71,6 +71,50 @@ public final class DJLEngine {
         }
     }
 
+    /** Copy the separately downloaded model into the private engine folder without loading it into RAM. */
+    public static synchronized String pasangModel(String sourcePath) {
+        if (modelPath == null || sourcePath == null || sourcePath.length() == 0) {
+            return "GALAT|Lokasi model belum ditentukan";
+        }
+        File source = new File(sourcePath);
+        if (!source.isFile()) {
+            return "GALAT|Berkas model tidak ditemukan";
+        }
+        File target = new File(modelPath);
+        if (source.getAbsolutePath().equals(target.getAbsolutePath())) {
+            try {
+                verifyModel(modelPath);
+                return "OK|Model terverifikasi";
+            } catch (Throwable error) {
+                return "GALAT|" + message(error);
+            }
+        }
+        File temporary = new File(modelPath + ".part");
+        try {
+            File parent = target.getParentFile();
+            if (parent != null && !parent.exists() && !parent.mkdirs()) {
+                return "GALAT|Folder model tidak bisa dibuat";
+            }
+            try (java.io.BufferedInputStream input =
+                         new java.io.BufferedInputStream(new java.io.FileInputStream(source), 1024 * 1024);
+                 BufferedOutputStream output =
+                         new BufferedOutputStream(new FileOutputStream(temporary, false), 1024 * 1024)) {
+                byte[] buffer = new byte[1024 * 1024];
+                int count;
+                while ((count = input.read(buffer)) != -1) {
+                    output.write(buffer, 0, count);
+                }
+                output.flush();
+            }
+            verifyModel(temporary.getAbsolutePath());
+            Os.rename(temporary.getAbsolutePath(), target.getAbsolutePath());
+            return "OK|Model berhasil disalin dan checksum cocok";
+        } catch (Throwable error) {
+            temporary.delete();
+            return "GALAT|" + message(error);
+        }
+    }
+
     /** Matches the three-String asynchronous entry point called by MD.mulai(). */
     public static String mulai(final String audioPath, final String workDir, final String id) {
         if (!libraryLoaded) {
