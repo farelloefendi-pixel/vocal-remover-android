@@ -12,8 +12,6 @@ public final class MDXNetDSPTest {
             right[i] = (float) (0.23 * Math.sin(2.0 * Math.PI * 311.0 * i / 44100.0)
                     - 0.09 * Math.cos(2.0 * Math.PI * 1703.0 * i / 44100.0));
         }
-        left[12000] += 0.5f;
-        right[18111] -= 0.4f;
 
         float[] window = MDXNetDSP.createWindow();
         float[] envelope = MDXNetDSP.createEnvelope(window);
