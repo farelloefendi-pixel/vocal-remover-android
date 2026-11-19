@@ -82,5 +82,5 @@ Lua memantau status melalui Handler pada thread UI. Native callback progres tida
 ## Batas validasi
 
 - Build CI dapat mengompilasi pustaka JNI, DEX, dan sintaks Lua, tetapi belum menguji runtime CSR.
-- Pemanggilan JNI, decoder MediaCodec, Vulkan, pembatalan, pemulihan, serta navigasi screen reader harus diuji pada perangkat sasaran.
+- Pemanggilan JNI untuk prepare/resampling, decoder MediaCodec, inferensi ONNX CPU, pembatalan, pemulihan, serta navigasi screen reader harus diuji pada perangkat sasaran.
 - Hasil saat ini disimpan di direktori privat. Ekspor ke folder Musik bersama belum tersedia.
