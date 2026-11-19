@@ -6,6 +6,7 @@ import android.system.Os;
 import ai.onnxruntime.OrtEnvironment;
 import ai.onnxruntime.OrtSession;
 import ai.onnxruntime.OnnxTensor;
+import ai.onnxruntime.TensorInfo;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -284,6 +285,19 @@ public final class DJLEngine {
                 }
                 if (!session.getOutputNames().contains("stems")) {
                     return "GALAT|Output model bukan bernama stems";
+                }
+                TensorInfo inputInfo = (TensorInfo) session.getInputInfo().get("mix").getInfo();
+                TensorInfo outputInfo = (TensorInfo) session.getOutputInfo().get("stems").getInfo();
+                long[] inputShape = inputInfo.getShape();
+                long[] outputShape = outputInfo.getShape();
+                if (inputShape.length != 3 || inputShape[0] != 1
+                        || inputShape[1] != 2 || inputShape[2] != 343980) {
+                    return "GALAT|Bentuk input model tidak sesuai kontrak 6-stem";
+                }
+                if (outputShape.length != 4 || outputShape[0] != 1
+                        || outputShape[1] != 6 || outputShape[2] != 2
+                        || outputShape[3] != 343980) {
+                    return "GALAT|Bentuk output model tidak sesuai kontrak 6-stem";
                 }
                 int samples = 343980;
                 int values = samples * 2;
