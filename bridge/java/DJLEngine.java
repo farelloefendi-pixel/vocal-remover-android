@@ -167,6 +167,9 @@ public final class DJLEngine {
                     "Memeriksa model", "Memverifikasi SHA-256");
             verifyModel(temporary.getAbsolutePath());
             Os.rename(temporary.getAbsolutePath(), target.getAbsolutePath());
+            verifiedModelPath = target.getAbsolutePath();
+            verifiedModelLength = target.length();
+            verifiedModelModified = target.lastModified();
             writeStatus(new File(statusPath), "selesai", 100,
                     "Model siap", "Model berhasil diunduh dan diverifikasi");
             return "OK|Model berhasil diunduh dan diverifikasi";
@@ -231,6 +234,9 @@ public final class DJLEngine {
             }
             verifyModel(temporary.getAbsolutePath());
             Os.rename(temporary.getAbsolutePath(), target.getAbsolutePath());
+            verifiedModelPath = target.getAbsolutePath();
+            verifiedModelLength = target.length();
+            verifiedModelModified = target.lastModified();
             return "OK|Model berhasil disalin dan checksum cocok";
         } catch (Throwable error) {
             temporary.delete();
