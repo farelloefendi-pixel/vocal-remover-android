@@ -46,6 +46,16 @@ Paper resmi Spleeter di JOSS menyatakan bahwa source code dan model pretrained d
 - [Isu lisensi model #898](https://github.com/deezer/spleeter/issues/898)
 - [Isu klarifikasi #959](https://github.com/deezer/spleeter/issues/959)
 
+### BS-RoFormer SW 6-stem
+
+Model ini cocok dengan jumlah enam stem yang diminta, tetapi bobot pretrained berasal dari checkpoint yang direhost tanpa lisensi dan provenance yang dapat diverifikasi. Metadata MIT pada satu ekspor ONNX tidak mengubah status bobot: README ekspor menyatakan bobot asli tidak memiliki lisensi yang dinyatakan, dan pemilik rehost tidak mengetahui siapa pelatih atau asal dataset. Lisensi MIT arsitektur dan pipeline konversi tidak otomatis mencakup bobot.
+
+Selain itu, ukuran ONNX FP16 yang ditemukan sekitar 336 MB; panduan desktop yang diperiksa menyebut sekitar 6 GB RAM bebas untuk pemrosesan dan waktu CPU sekitar 11 menit untuk lagu tiga menit pada PC 12-core. Ini berisiko terlalu berat untuk ponsel dengan RAM fisik 6 GB.
+
+- [Model card ONNX 6-stem](https://huggingface.co/elicwhite/bs-roformer-sw-6stem-onnx)
+- [Diskusi provenance bobot](https://github.com/openmirlab/bs-roformer-infer/issues/3)
+- [Panduan kebutuhan komputasi](https://tucktuckg00se.github.io/INTERSECT/stem-separation/)
+
 ### Open-Unmix UMX-HQ 4-stem
 
 Bobot UMX-HQ di Zenodo menyediakan empat target: vocals, drums, bass, other. Namun halaman record Zenodo yang diperiksa tidak menampilkan nilai lisensi yang tegas. Beberapa model card ONNX pihak ketiga menyebut MIT, tetapi itu belum sama dengan bukti pemberian lisensi primer dari pemilik bobot. Karena itu UMX-HQ masih kandidat yang perlu diverifikasi, bukan model yang sudah disetujui. Kualitas dan kelayakan port Android C++/ONNX juga harus diuji. Tidak ada stem piano atau gitar tersendiri.
@@ -53,6 +63,17 @@ Bobot UMX-HQ di Zenodo menyediakan empat target: vocals, drums, bass, other. Nam
 - [Record bobot UMX-HQ di Zenodo](https://zenodo.org/records/3370489)
 - [Open-Unmix model documentation](https://sigsep.github.io/open-unmix/)
 - [Contoh model card ONNX pihak ketiga yang menyebut MIT](https://huggingface.co/edgetools/umx-hq) (bukan bukti primer dari pemilik bobot)
+
+## Pemeriksaan tambahan atas Spleeter
+
+Paper JOSS Spleeter menyatakan source code dan pretrained models didistribusikan di bawah MIT. Namun README repositori saat ini hanya menyebut kode MIT. Issue #959, dibuka pada 13 September 2026, meminta konfirmasi apakah bobot pretrained juga tercakup MIT, termasuk untuk penggunaan komersial; pada pemeriksaan ini belum ada jawaban maintainer yang menyelesaikan perbedaan tersebut.
+
+Repositori konversi ONNX pihak ketiga menuliskan argumen bahwa paper JOSS merupakan dasar lisensi bobot, tetapi itu tetap merupakan interpretasi penerbit konversi, bukan klarifikasi baru dari Deezer. Untuk itu Spleeter 5-stem tetap kandidat yang lebih menjanjikan, belum dinyatakan lolos audit lisensi final.
+
+- [Paper JOSS Spleeter](https://github.com/deezer/spleeter/blob/master/paper.md)
+- [README resmi Spleeter](https://github.com/deezer/spleeter)
+- [Issue klarifikasi lisensi #959](https://github.com/deezer/spleeter/issues/959)
+- [NOTICE konversi ONNX](https://github.com/matthewbae/spleeter-onnx-models/blob/main/NOTICE)
 
 ## Keputusan yang masih diperlukan
 
