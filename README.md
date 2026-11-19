@@ -6,7 +6,7 @@ Proyek **ekstensi CSR/Jieshuo** untuk memisahkan audio musik secara offline di A
 
 - Antarmuka dan pengendali: Lua.
 - Jembatan native: Java DEX yang dimuat melalui `DexClassLoader`.
-- ONNX Runtime Android 1.32.0 dan kedua library native ARM64-nya kini dipaketkan. Bridge menginisialisasi runtime dan menyediakan smoke test satu segmen; pemrosesan lagu penuh belum diimplementasikan. Mesin C++ Demucs lama masih berupa prototipe.
+- ONNX Runtime Android 1.32.0 dan kedua library native ARM64-nya kini dipaketkan. Bridge menginisialisasi runtime dan menyediakan smoke test satu segmen. Jalur inferensi streaming, enam writer WAV, dan instrumental kini sudah ditulis; hasil build dan uji perangkat belum diverifikasi. Mesin C++ Demucs lama masih berupa prototipe.
 - Hasil: vocals, drums, bass, other, guitar, dan piano.
 - Pemrosesan berjalan pada worker Java/C++, satu pekerjaan pada satu waktu.
 - Progres, pembatalan, pemulihan pekerjaan, dan pembersihan file sementara.
@@ -34,7 +34,7 @@ Artefak yang tertaut di atas adalah build development sebelumnya. Perubahan ONNX
 
 ## Status model
 
-Mesin C++ HTDemucs yang ada belum menjadi jalur pemisahan aktif. ONNX Runtime Android 1.32.0 serta dua library native ARM64 sudah dimasukkan dalam workflow build. Bridge mengatur path keduanya sebelum membuat OrtEnvironment. Metode smoke test satu segmen memeriksa nama node, bentuk tensor, dan nilai output; belum ada hasil eksekusi pada perangkat. Kandidat HTDemucs 6S ONNX (136 MB, enam stem) belum diaktifkan karena pernyataan MIT pada ekspor belum cukup untuk memastikan hak bobot dasar. Pipeline inferensi streaming dan writer enam WAV masih harus dibuat. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan [perbandingan kandidat](docs/KEPUTUSAN_MODEL.md).
+Mesin C++ HTDemucs yang ada belum menjadi jalur pemisahan aktif. ONNX Runtime Android 1.32.0 serta dua library native ARM64 sudah dimasukkan dalam workflow build. Bridge mengatur path keduanya sebelum membuat OrtEnvironment. Metode smoke test satu segmen memeriksa nama node, bentuk tensor, dan nilai output; belum ada hasil eksekusi pada perangkat. Kandidat HTDemucs 6S ONNX (136 MB, enam stem) belum diaktifkan karena hak penggunaan bobot hasil konversi belum dapat dipastikan. Pipeline inferensi streaming dan writer enam WAV plus instrumental sudah ditulis, tetapi belum dikompilasi ulang dan diuji pada perangkat. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan [perbandingan kandidat](docs/KEPUTUSAN_MODEL.md).
 
 ## Standar mutu dan rilis komersial
 
