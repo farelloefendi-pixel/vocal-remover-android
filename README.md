@@ -38,7 +38,7 @@ Mesin C++ HTDemucs yang ada belum menjadi jalur pemisahan aktif. Kandidat HTDemu
 
 ## Standar mutu dan rilis komersial
 
-Target mutu mencakup penghapusan vokal sepanjang lagu dan enam stem yang sinkron. Pengujian harus mencakup pop, dangdut, rebab, suling, dan gamelan dengan audio yang hak pengujiannya jelas. Model 6-stem tidak otomatis menghasilkan penghapusan vokal terbaik; benchmark penerbit menunjukkan perbedaan mutu vokal antara model 6S dan model 4-stem. Rilis komersial ditahan sampai izin bobot dan hasil uji mutu/perangkat terverifikasi. Lihat [rencana mutu dan gerbang rilis](docs/KEPUTUSAN_MODEL.md).
+Target mutu mencakup penghapusan vokal sepanjang lagu dan enam stem yang sinkron. Pengujian harus mencakup pop, dangdut, rebab, suling, dan gamelan dengan audio yang hak pengujiannya jelas. Model 6-stem tidak otomatis menghasilkan penghapusan vokal terbaik; benchmark penerbit menunjukkan perbedaan mutu vokal antara model 6S dan model 4-stem. Rilis komersial ditahan sampai izin bobot dan hasil uji mutu/perangkat terverifikasi. Lihat [rencana mutu dan gerbang rilis](docs/KEPUTUSAN_MODEL.md) serta [strategi inferensi streaming dan mode kualitas](docs/STRATEGI_KUALITAS.md).
 
 ## Batas validasi
 
