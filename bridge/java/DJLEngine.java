@@ -564,7 +564,7 @@ public final class DJLEngine {
             String wave = new String(header, 8, 4, StandardCharsets.US_ASCII);
             String data = new String(header, 36, 4, StandardCharsets.US_ASCII);
             if (!"RIFF".equals(riff) || !"WAVE".equals(wave) || !"data".equals(data)
-                    || h.getInt(24) != 44100 || h.getInt(40) != expectedFrames * 4L) {
+                    || h.getInt(24) != 44100 || Integer.toUnsignedLong(h.getInt(40)) != expectedFrames * 4L) {
                 throw new IOException("Header WAV hasil tidak valid");
             }
         }
