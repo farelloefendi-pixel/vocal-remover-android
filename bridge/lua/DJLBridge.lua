@@ -194,7 +194,7 @@ end
 
 function M.modelSiap()
   if not MODEL_ENABLED then
-    return false, "Kim Vocal 2 belum dapat digunakan karena mesin inferensi MDX-Net belum selesai diimplementasikan."
+    return false, "Mesin Kim Vocal 2 sedang dinonaktifkan oleh konfigurasi."
   end
   local kls, pesan = M.siapkan()
   if not kls then return false, pesan end
@@ -206,7 +206,7 @@ end
 
 function M.unduhModel()
   if not MODEL_ENABLED or not MODEL_URL then
-    return false, "Unduhan Kim Vocal 2 belum diaktifkan sampai pemeriksaan ONNX dan pipeline MDX-Net selesai."
+    return false, "Unduhan model dinonaktifkan oleh konfigurasi."
   end
   local kls, pesan = M.siapkan()
   if not kls then return false, pesan end
@@ -270,7 +270,7 @@ end
 
 function M.pasangModel(path)
   if not MODEL_ENABLED then
-    return false, "Pemasangan Kim Vocal 2 belum diaktifkan sampai pemeriksaan ONNX dan pipeline MDX-Net selesai."
+    return false, "Pemasangan model dinonaktifkan oleh konfigurasi."
   end
   local kls, pesan = M.siapkan()
   if not kls then return false, pesan end
