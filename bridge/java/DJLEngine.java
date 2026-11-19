@@ -59,7 +59,7 @@ public final class DJLEngine {
     private static native void nativeCancel();
 
     /** Matches the exact one-String method invoked by MD.siapkan() in the reference Lua. */
-    public static synchronized String muat(String soPath) {
+    public static synchronized String muat(String soPath, String ortDirectory) {
         try {
             if (soPath == null || soPath.length() == 0) {
                 return "GALAT|Lokasi pustaka native kosong";
@@ -74,6 +74,17 @@ public final class DJLEngine {
                 return "GALAT|Folder mesin tidak ditemukan";
             }
             modelPath = new File(parent, "5c90dfd2.safetensors").getAbsolutePath();
+            if (ortDirectory == null || ortDirectory.length() == 0) {
+                return "GALAT|Folder pustaka ONNX Runtime kosong";
+            }
+            File ortFolder = new File(ortDirectory);
+            File ortCore = new File(ortFolder, "libonnxruntime.so");
+            File ortJni = new File(ortFolder, "libonnxruntime4j_jni.so");
+            if (!ortCore.isFile() || !ortJni.isFile()) {
+                return "GALAT|Dua pustaka native ONNX Runtime tidak lengkap";
+            }
+            System.setProperty("onnxruntime.native.onnxruntime.path", ortCore.getAbsolutePath());
+            System.setProperty("onnxruntime.native.onnxruntime4j_jni.path", ortJni.getAbsolutePath());
             ortEnvironment = OrtEnvironment.getEnvironment();
             String info = nativeComputeInfo(1, false);
             return "OK|ONNX Runtime Android siap; " + (info == null ? "mesin native tersedia" : info);
