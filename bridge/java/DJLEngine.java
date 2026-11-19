@@ -596,7 +596,7 @@ public final class DJLEngine {
         }
         final long total = bytes / 8L;
         if (total < 44100L) throw new IOException("Audio lebih pendek dari satu detik");
-        final long paddedLength = total + 2L * MDXNetDSP.BORDER;
+        final long paddedLength = total + 2L * MDXNetDSP.BORDER + 1L;
         final long chunks = paddedLength <= MDXNetDSP.CHUNK ? 1L
                 : ((paddedLength - MDXNetDSP.CHUNK + MDXNetDSP.STEP - 1L)
                         / MDXNetDSP.STEP) + 1L;
