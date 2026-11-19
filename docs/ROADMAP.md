@@ -2,12 +2,12 @@
 
 ## Tahap 0 — pemeriksaan referensi
 
-- [x] Buka paket PPK referensi.
+- [x] Buka arsip PPK terbaru dan periksa seluruh daftar berkas.
 - [x] Catat pola pemuatan DEX dan SO dari Lua.
 - [x] Catat pemilihan pustaka 32/64-bit.
 - [x] Catat pemantauan progres dan pembatalan berbasis file.
 - [x] Identifikasi perbedaan kontrak PCM array pada JNI referensi.
-- [ ] Periksa bytecode `DJLEngine.dex` secara penuh untuk memverifikasi metode dan lifecycle Java.
+- [x] Periksa header DEX, kelas, field, method signature, serta native method melalui tabel DEX.\n- [ ] Dekompilasi instruksi metode DEX lebih lanjut jika dibutuhkan untuk menyamakan detail internal.
 
 ## Tahap 1 — audit dan validasi mesin
 
@@ -22,10 +22,10 @@
 
 - [x] Tentukan arah adaptasi: kelas Java DEX CSR menggantikan contoh binding Kotlin upstream.
 - [x] Tentukan input mesin berupa file raw float32, bukan satu array PCM besar.
-- [ ] Rancang API Java final untuk prepare/start/status/cancel/release.
-- [ ] Implementasikan worker native yang tidak memblokir thread UI.
-- [ ] Implementasikan decode MediaCodec ke file float32 secara bertahap.
-- [ ] Implementasikan penulisan enam stem bertahap.
+- [x] Susun kelas Java DEX awal dengan kontrak Lua `muat/mulai/batal/hidup` dan native methods upstream.
+- [x] Implementasikan rancangan worker Java asinkron; validasi runtime masih menunggu build dan uji perangkat.
+- [x] Tulis decoder MediaCodec bertahap ke file raw float32; perlu verifikasi kompilasi dan pengujian format nyata.
+- [x] Hubungkan pemanggilan separation native dan format hasil enam file; perlu uji output nyata.
 - [ ] Uji pembatalan saat decode, inferensi, dan ekspor.
 - [ ] Uji pemulihan setelah ekstensi ditutup atau proses dihentikan sistem.
 
@@ -64,3 +64,9 @@ Catat:
 ## Kriteria tidak boleh dilewati
 
 Jangan menyatakan ekstensi siap pakai sebelum mesin native, model, enam keluaran, pembatalan, dan navigasi screen reader benar-benar diuji pada perangkat sasaran.
+
+## Build otomatis
+
+- [x] Tambahkan workflow GitHub Actions untuk membangun `DJLEngine.dex` dan `libdjl64.so`.
+- [ ] Pastikan workflow lulus dan perbaiki error build jika ada.
+- [ ] Verifikasi hasil build dan signature JNI sebelum membuat paket PPK.
