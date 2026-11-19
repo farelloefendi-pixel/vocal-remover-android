@@ -31,6 +31,7 @@ Tahap berikutnya adalah mengganti mesin JNI lama dengan C ABI `stems.cpp`, memba
 ## Dokumentasi
 
 - [Keputusan mesin Kim Vocal 2 dan dasar izin](docs/KEPUTUSAN_MDX_KIM.md)
+- [Rencana build Android ARM64 dan integrasi native](docs/BUILD_ANDROID_ARM64.md)
 - [Arsitektur lama dan catatan migrasi](docs/ARSITEKTUR.md)
 - [Pemeriksaan lisensi model sebelumnya](docs/LISENSI_MODEL.md)
 - [Roadmap dan pengujian](docs/ROADMAP.md)
