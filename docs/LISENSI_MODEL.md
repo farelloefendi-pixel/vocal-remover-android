@@ -58,11 +58,12 @@ Selain itu, ukuran ONNX FP16 yang ditemukan sekitar 336 MB; panduan desktop yang
 
 ### Open-Unmix UMX-HQ 4-stem
 
-Bobot UMX-HQ di Zenodo menyediakan empat target: vocals, drums, bass, other. Namun halaman record Zenodo yang diperiksa tidak menampilkan nilai lisensi yang tegas. Beberapa model card ONNX pihak ketiga menyebut MIT, tetapi itu belum sama dengan bukti pemberian lisensi primer dari pemilik bobot. Karena itu UMX-HQ masih kandidat yang perlu diverifikasi, bukan model yang sudah disetujui. Kualitas dan kelayakan port Android C++/ONNX juga harus diuji. Tidak ada stem piano atau gitar tersendiri.
+Bobot UMX-HQ di Zenodo menyediakan empat target: vocals, drums, bass, other. Halaman record Zenodo yang dibuka menampilkan bagian Rights/License tetapi nilai lisensinya tidak tampak pada halaman tersebut. Ada laporan teknis pihak ketiga yang menyatakan metadata API record 3370489 berisi `metadata.license.id = mit-license`, dan model card ONNX lain juga menyebut bobot UMX-HQ sebagai MIT. Ini petunjuk kuat untuk ditindaklanjuti, tetapi nilai API harus diverifikasi langsung dan notice asli harus diarsipkan sebelum model diterima. UMX-HQ tetap tidak memenuhi target enam stem karena tidak memiliki piano atau gitar tersendiri. Kualitas dan kelayakan port Android C++/ONNX juga harus diuji.
 
 - [Record bobot UMX-HQ di Zenodo](https://zenodo.org/records/3370489)
 - [Open-Unmix model documentation](https://sigsep.github.io/open-unmix/)
-- [Contoh model card ONNX pihak ketiga yang menyebut MIT](https://huggingface.co/edgetools/umx-hq) (bukan bukti primer dari pemilik bobot)
+- [Laporan pemeriksaan metadata API Zenodo](https://github.com/ContextualWisdomLab/bandscope/issues/1180) (laporan pihak ketiga; verifikasi langsung masih diperlukan)
+- [Contoh model card ONNX yang menyebut MIT](https://huggingface.co/edgetools/umx-hq)
 
 ## Pemeriksaan tambahan atas Spleeter
 
