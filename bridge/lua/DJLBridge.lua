@@ -61,7 +61,7 @@ local function salin(data, tujuan)
 end
 
 local function folderCache(nama)
-  local induk = tostring(ctx.getCacheDir().getAbsolutePath())
+  local induk = tostring(ctx.getFilesDir().getAbsolutePath())
   local path = induk .. "/" .. nama
   pcall(function() File(path).mkdirs() end)
   return path
