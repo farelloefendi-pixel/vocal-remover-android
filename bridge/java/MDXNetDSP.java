@@ -55,8 +55,13 @@ final class MDXNetDSP {
                 for (int bin = 0; bin < DIM_F; bin++) {
                     int realIndex = (realPlane * DIM_F + bin) * DIM_T + frame;
                     int imagIndex = (imagPlane * DIM_F + bin) * DIM_T + frame;
-                    target.put(realIndex, re[bin]);
-                    target.put(imagIndex, im[bin]);
+                    if (bin < 3) {
+                        target.put(realIndex, 0f);
+                        target.put(imagIndex, 0f);
+                    } else {
+                        target.put(realIndex, re[bin]);
+                        target.put(imagIndex, im[bin]);
+                    }
                 }
             }
         }
