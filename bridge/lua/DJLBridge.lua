@@ -175,7 +175,7 @@ function M.siapkan()
   end
 
   kelas = hasil
-  properties.put("vocalremover.kelas", kelas)
+  properties.put("vocalremover.kelas.ort132", kelas)
   return kelas, pesan
 end
 
