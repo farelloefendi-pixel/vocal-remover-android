@@ -23,6 +23,14 @@ Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal haru
 
 Pola pemuatan DEX, pemilihan pustaka berdasarkan arsitektur, pemisahan pekerjaan dari utas antarmuka, pemantauan status, dan permintaan pembatalan mengacu pada ekstensi referensi. Mesin Demucs yang dipilih menyediakan API C++ dan binding JNI yang dapat diarahkan ke kelas Java DEX khusus.
 
+## Implementasi awal
+
+- Sumber Java DEX: `bridge/java/DJLEngine.java`.
+- Kontrak Lua–Java mengikuti `muat`, `mulai`, `batal`, dan `hidup` pada PPK referensi.
+- Workflow GitHub Actions disiapkan untuk membangun DEX dan pustaka JNI ARM64: [Build CSR native engine](.github/workflows/build-engine.yml).
+- Model terpisah dan tidak dimasukkan ke repositori: `5c90dfd2.safetensors` (checksum diverifikasi oleh bridge saat mulai bekerja).
+- Build dan pengujian perangkat masih menunggu hasil CI; kode bridge belum boleh dianggap siap dipasang.
+
 ## Dokumen proyek
 
 - [Pemeriksaan pola ekstensi referensi](docs/REFERENSI_INTEGRASI.md)
