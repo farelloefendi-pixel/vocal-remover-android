@@ -44,7 +44,7 @@ Decoder Android MediaCodec menentukan format PCM hasil decode. Bridge menangani 
 
 ## Lokasi file dan ekspor
 
-File sementara, status, dan hasil saat ini disimpan pada direktori privat CSR/Jieshuo. Menu hasil dapat memutar setiap WAV dan menyalin path lengkap. Menyalin file ke folder Musik bersama belum termasuk pada build awal; perlu jalur ekspor Android yang kompatibel dengan izin penyimpanan dan perlu diuji terpisah.
+Jika model pengganti diaktifkan, file sementara, status, dan hasil dirancang disimpan pada direktori privat CSR/Jieshuo. Menu pemutaran stem dan penyalinan path sudah disiapkan dalam kode, tetapi build development saat ini belum menghasilkan WAV. Ekspor ke folder Musik bersama juga belum tersedia.
 
 ## Batas hasil musik tradisional
 
@@ -55,9 +55,9 @@ Model HTDemucs 6S memisahkan enam kategori umum, bukan instrumen Jawa satu per s
 Paket hasil CI hanya membuktikan build berhasil. Sebelum pemakaian rutin, uji:
 - pemuatan DEX dan SO pada CSR di Android 16;
 - izin baca berkas audio;
-- unduhan model dan checksum;
+- pemilihan model alternatif dan verifikasi checksum;
 - decode beberapa format audio;
-- keenam WAV dapat diputar;
+- keenam WAV dapat dihasilkan dan diputar setelah model aktif;
 - pembatalan saat decode dan inferensi;
 - penggunaan RAM, suhu, waktu, dan respons screen reader;
 - pemulihan setelah ekstensi ditutup atau sistem menghentikan proses.
