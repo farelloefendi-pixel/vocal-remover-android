@@ -476,7 +476,12 @@ public final class DJLEngine {
             deleteTree(output);
             new File(root, "hasil_" + id + ".json").delete();
         } catch (Throwable error) {
-            writeStatus(status, "galat", 0, "Gagal", message(error));
+            if (cancel.exists()) {
+                writeStatus(status, "batal", 0, "Dibatalkan",
+                        "Pekerjaan dihentikan atas permintaan pengguna");
+            } else {
+                writeStatus(status, "galat", 0, "Gagal", message(error));
+            }
             deleteTree(output);
             new File(root, "hasil_" + id + ".json").delete();
         } finally {
@@ -615,6 +620,7 @@ public final class DJLEngine {
             float[] weights = new float[ONNX_SAMPLES];
             float[] instrumentalL = new float[ONNX_STRIDE];
             float[] instrumentalR = new float[ONNX_STRIDE];
+            byte[] audioBlock = new byte[ONNX_SAMPLES * 8];
             ByteBuffer tensorBytes = ByteBuffer.allocateDirect(ONNX_SAMPLES * 2 * 4)
                     .order(ByteOrder.nativeOrder());
             FloatBuffer tensorData = tensorBytes.asFloatBuffer();
@@ -628,11 +634,12 @@ public final class DJLEngine {
             for (long chunk = 0; chunk < chunks; chunk++) {
                 checkCancelled(cancel);
                 int available = (int) Math.min(ONNX_SAMPLES, total - start);
-                byte[] audioBlock = new byte[available * 8];
+                java.util.Arrays.fill(audioBlock, (byte) 0);
                 inputFile.seek(start * 8L);
-                inputFile.readFully(audioBlock);
+                inputFile.readFully(audioBlock, 0, available * 8);
                 FloatBuffer rawInterleaved = ByteBuffer.wrap(audioBlock)
                         .order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
+                rawInterleaved.limit(available * 2);
 
                 tensorData.clear();
                 for (int i = 0; i < ONNX_SAMPLES; i++) {
