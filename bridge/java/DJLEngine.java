@@ -331,7 +331,7 @@ public final class DJLEngine {
                 throw new IOException("Folder kerja tidak bisa dibuat");
             }
             cancel.delete();
-            writeStatus(status, "jalan", 0, "Membuka audio", "Menyiapkan pekerjaan");
+            writeStatus(status, "jalan", 0, "Memuat model", "Memeriksa bobot dan menyiapkan mesin Demucs");
             checkCancelled(cancel);
 
             verifyModel(modelPath);
@@ -395,11 +395,18 @@ public final class DJLEngine {
                 }
             };
 
-            writeStatus(status, "jalan", 30, "Memisahkan audio", "Mesin Demucs sedang bekerja");
+            writeStatus(status, "jalan", 30, "Menyiapkan akselerasi", "Memeriksa dukungan Vulkan dan CPU");
             boolean[] write = new boolean[] { true, true, true, true, true, true };
-            int computeThreads = Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
+            int computeThreads = Math.min(3,
+                    Math.max(1, Runtime.getRuntime().availableProcessors() - 1));
+            String computeInfo = nativeComputeInfo(computeThreads, true);
+            boolean useGpu = computeInfo != null
+                    && computeInfo.contains("GPU: ")
+                    && !computeInfo.contains("GPU not used");
+            writeStatus(status, "jalan", 30, "Memisahkan audio",
+                    (useGpu ? "Akselerasi GPU aktif. " : "Menggunakan CPU. ") + computeInfo);
             nativeSeparate(prepared.getAbsolutePath(), output.getAbsolutePath(),
-                    write, 1, computeThreads, false, separationProgress);
+                    write, 1, computeThreads, useGpu, separationProgress);
             checkCancelled(cancel);
 
             writeResult(new File(root, "hasil_" + id + ".json"), output);
