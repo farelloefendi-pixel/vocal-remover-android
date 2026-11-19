@@ -115,3 +115,33 @@ Model enam stem bukan pemisah instrumen tradisional khusus. Rebab, suling, gende
 - Catat lisensi kode, model, dan dependensi secara terpisah.
 - Catat checksum model dan binary sebelum distribusi.
 - Model tidak dimasukkan ke Git biasa jika ukuran atau ketentuan lisensinya tidak sesuai.
+
+
+## 9. Kontrak DEX yang mengikuti PPK referensi
+
+Kelas Java di dalam DEX harus tetap bernama `DJLEngine` dan menyediakan metode statis yang dipanggil Lua melalui refleksi:
+- `muat(String soPath): String`
+- `mulai(String audioPath, String workDir, String jobId): String`
+- `batal(String workDir, String jobId): String`
+- `hidup(String jobId): String`
+
+Metode `muat` memuat SO menggunakan path absolut. Untuk binding JNI Demucs, kelas yang sama juga mendeklarasikan native method upstream dan interface `DJLEngine$ProgressListener`. Build CMake harus mengatur `SDENGINE_JNI_CLASS=DJLEngine`.
+
+Metode `mulai` memulai satu worker Java asinkron. Worker mendekode audio, menjalankan prepare dan separation native, lalu memperbarui `status_<jobId>.txt`. Lua tetap menjadi pemantau dan pengendali UI.
+
+## 10. Lokasi model
+
+Bridge mencari bobot `5c90dfd2.safetensors` di folder privat yang sama dengan pustaka SO. Loader Lua perlu menyalin bobot ke folder tersebut menggunakan salinan streaming berbasis buffer, bukan membaca seluruh file ke satu string. Checksum wajib diverifikasi sebelum model digunakan.
+
+## 11. Format hasil untuk ekstensi
+
+Worker menghasilkan:
+- `stem_<jobId>/drums.wav`
+- `stem_<jobId>/bass.wav`
+- `stem_<jobId>/other.wav`
+- `stem_<jobId>/vocals.wav`
+- `stem_<jobId>/guitar.wav`
+- `stem_<jobId>/piano.wav`
+- `hasil_<jobId>.json` berisi lokasi keluaran.
+
+Parser Lua hasil tempo/chord pada referensi tidak digunakan untuk hasil Vocal Remover; format JSON hasil harus ditangani secara khusus.
