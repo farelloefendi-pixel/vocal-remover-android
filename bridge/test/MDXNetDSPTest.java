@@ -74,7 +74,10 @@ public final class MDXNetDSPTest {
             for (long sample = 0; sample < length; sample++) {
                 long paddedSample = MDXNetDSP.BORDER + sample;
                 double weight = 0d;
-                for (long chunk = 0; chunk < chunks; chunk++) {
+                long firstChunk = paddedSample < MDXNetDSP.CHUNK ? 0L
+                        : (paddedSample - MDXNetDSP.CHUNK) / MDXNetDSP.STEP + 1L;
+                long lastChunk = Math.min(chunks - 1L, paddedSample / MDXNetDSP.STEP);
+                for (long chunk = firstChunk; chunk <= lastChunk; chunk++) {
                     long local = paddedSample - chunk * MDXNetDSP.STEP;
                     if (local >= 0 && local < MDXNetDSP.CHUNK) {
                         weight += blend[(int) local];
