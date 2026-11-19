@@ -19,6 +19,17 @@ public final class MDXNetDSPTest {
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
         MDXNetDSP.BluesteinFFT fft = new MDXNetDSP.BluesteinFFT(MDXNetDSP.N_FFT);
         MDXNetDSP.createInput(left, right, tensor, window, fft);
+        for (int plane = 0; plane < 4; plane++) {
+            for (int bin = 0; bin < 3; bin++) {
+                for (int frameIndex = 0; frameIndex < MDXNetDSP.DIM_T; frameIndex++) {
+                    int index = (plane * MDXNetDSP.DIM_F + bin) * MDXNetDSP.DIM_T
+                            + frameIndex;
+                    if (tensor.get(index) != 0f) {
+                        throw new AssertionError("Kim Vocal 2 low-frequency bins must be zero");
+                    }
+                }
+            }
+        }
 
         int frame = 37;
         int bin = 83;
