@@ -25,13 +25,6 @@ import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * Java bridge loaded by the CSR extension through DexClassLoader.
- * Keep the class in the default package: the native build registers on DJLEngine.
- *
- * Lua calls muat(String,String), mulai(String,String,String), batal(String,String),
- * and hidup(String). Long work runs on this class's own Java worker thread.
- */
 public final class DJLEngine {
     public interface ProgressListener {
         boolean onProgress(float fraction, String stage);
@@ -62,7 +55,7 @@ public final class DJLEngine {
     private static native String nativeComputeInfo(int computeThreads, boolean gpu);
     private static native void nativeCancel();
 
-    /** Initializes the native preparation library and ONNX Runtime paths. */
+    
     public static synchronized String muat(String soPath, String ortDirectory) {
         try {
             if (soPath == null || soPath.length() == 0) {
@@ -96,12 +89,12 @@ public final class DJLEngine {
         }
     }
 
-    /** Absolute private path used for the model weights. */
+    
     public static String lokasiModel() {
         return modelPath == null ? "" : modelPath;
     }
 
-    /** Check an already installed model without copying or loading it. */
+    
     public static String modelSiap() {
         if (modelPath == null || !new File(modelPath).isFile()) {
             return "BELUM|Model belum diunduh";
@@ -114,10 +107,7 @@ public final class DJLEngine {
         }
     }
 
-    /**
-     * Download the model on the caller's worker thread. Writes the same
-     * pipe-delimited progress format used by the separation worker.
-     */
+    
     public static String unduhModel(String url, String statusPath) {
         if (!libraryLoaded || modelPath == null) {
             return "GALAT|Mesin native belum dimuat";
@@ -216,7 +206,7 @@ public final class DJLEngine {
         return "OK";
     }
 
-    /** Copy the separately downloaded model into the private engine folder without loading it into RAM. */
+    
     public static synchronized String pasangModel(String sourcePath) {
         if (modelPath == null || sourcePath == null || sourcePath.length() == 0) {
             return "GALAT|Lokasi model belum ditentukan";
@@ -335,7 +325,7 @@ public final class DJLEngine {
         }
     }
 
-    /** Matches the three-String asynchronous entry point called by MD.mulai(). */
+    
     public static String mulai(final String audioPath, final String workDir, final String id) {
         if (!libraryLoaded) {
             return "GALAT|Mesin native belum dimuat";
@@ -380,7 +370,7 @@ public final class DJLEngine {
         }
     }
 
-    /** Matches the two-String cancellation method called by MD.batal(). */
+    
     public static String batal(String workDir, String id) {
         try {
             File cancel = new File(workDir, "batal_" + id + ".flag");
@@ -404,7 +394,7 @@ public final class DJLEngine {
         }
     }
 
-    /** Matches the one-String liveness check called by MD.hidup(). */
+    
     public static String hidup(String id) {
         synchronized (WORKERS) {
             Thread worker = WORKERS.get(id);
@@ -779,7 +769,7 @@ public final class DJLEngine {
         }
     }
 
-    /** Decode compressed audio to interleaved little-endian float32 without retaining the song in RAM. */
+    
     private static AudioInfo decodeToFloat32(
             String inputPath, File rawFile, File status, File cancel) throws Exception {
 
@@ -1001,7 +991,6 @@ public final class DJLEngine {
 
         throw new IOException("Format PCM decoder belum didukung: " + encoding);
     }
-
 
     private static synchronized void verifyModel(String path) throws Exception {
         File model = new File(path);
