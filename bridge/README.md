@@ -1,96 +1,93 @@
-# Java DEX bridge
+# Java DEX dan adapter Lua CSR
 
-Direktori ini berisi kelas Java DEX dan adapter Lua untuk ekstensi CSR/Jieshuo. Ini bukan APK dan tidak membuat aplikasi Android mandiri.
+Folder ini berisi sumber jembatan untuk ekstensi CSR/Jieshuo. Ini bukan APK dan bukan aplikasi Android mandiri.
 
-## Adapter Lua
+## Referensi integrasi
 
-File `lua/DJLBridge.lua` mengikuti pola `MD` pada `main.lua` PPK referensi: pencarian `DJLEngine.dex` dan SO berdasarkan folder plugin, penyalinan ke cache, pemuatan melalui `DexClassLoader`, pemanggilan metode statis lewat refleksi, serta status pekerjaan berbasis file. Adapter menambahkan pengunduhan model streaming dengan progres, status pekerjaan, pembatalan, pembacaan enam hasil, dan penghapusan hasil.
+Adapter `lua/DJLBridge.lua` mengikuti pola fungsi `MD` pada PPK referensi:
+- mencari `DJLEngine.dex` dan pustaka SO sesuai ABI di folder plugin;
+- menyalin DEX dan SO ke cache privat;
+- memuat DEX menggunakan `DexClassLoader`;
+- memuat SO menggunakan `System.load(pathAbsolut)`;
+- memanggil metode statis melalui `getDeclaredMethod` dan `invoke`;
+- membaca status pekerjaan dari file teks;
+- menyimpan ID tugas aktif agar dapat dipulihkan saat ekstensi dibuka kembali.
 
-Inisialisasi dari `main.lua`:
-
+Di `main.lua`, adapter dimuat dari folder paket:
 ```lua
-local Bridge = require "bridge.lua.DJLBridge"
-Bridge.mulai(ctx, DJL.base)
+local base = -- direktori tempat main.lua berada
+local Bridge = assert(loadfile(base .. "bridge/lua/DJLBridge.lua"))()
+Bridge.mulai(ctx, base)
 local kelas, pesan = Bridge.siapkan()
 ```
 
-Jika model belum tersedia, mulai unduhan pada worker dan pantau `Bridge.statusModel()` dari handler UI:
+## Metode publik Java yang dipanggil Lua
 
-```lua
-Bridge.unduhModel()
--- polling berkala: Bridge.statusModel()
-```
+| Metode | Fungsi |
+|---|---|
+| `muat(String soPath)` | Memuat pustaka native dan menyiapkan path model |
+| `lokasiModel()` | Mengembalikan lokasi privat model |
+| `modelSiap()` | Memeriksa keberadaan dan checksum model |
+| `unduhModel(String url, String statusPath)` | Mengunduh model secara streaming pada worker |
+| `batalUnduhModel()` | Meminta pembatalan unduhan |
+| `pasangModel(String sourcePath)` | Memasang model lokal secara streaming |
+| `mulai(String audioPath, String workDir, String jobId)` | Memulai satu worker pemisahan |
+| `batal(String workDir, String jobId)` | Membuat marker pembatalan dan meminta cancel native |
+| `hidup(String jobId)` | Memeriksa worker |
+| `infoMesin()` | Informasi konfigurasi komputasi |
 
-Setelah model siap, `Bridge.mulaiPemisahan(pathAudio)` mengembalikan ID pekerjaan. Pantau `Bridge.status(id)`, batalkan dengan `Bridge.batal(id)`, dan baca enam path hasil melalui `Bridge.ambilHasil(id)`.
+Empat metode inti `muat/mulai/batal/hidup` mempertahankan kontrak PPK referensi. Metode tambahan mengelola model dan informasi mesin.
 
-## Kontrak Lua yang mengikuti referensi
+## Kontrak JNI
 
-Lua pada PPK referensi menggunakan refleksi untuk memanggil empat metode statis dengan argumen String:
-
-- `muat(String soPath)`
-- `mulai(String audioPath, String workDir, String jobId)`
-- `batal(String workDir, String jobId)`
-- `hidup(String jobId)`
-
-Kelas `DJLEngine.java` mempertahankan nama dan signature tersebut agar pola pemanggilan `MD.panggil()` dan pemantauan status Lua dapat digunakan kembali.
-
-## Kontrak JNI Demucs
-
-Mesin upstream mendaftarkan native method pada kelas yang ditentukan oleh CMake. Kelas bridge ini memakai default package, sehingga build native harus memakai:
-
+CMake membangun dengan:
 ```cmake
-set(SDENGINE_JNI ON)
-set(SDENGINE_JNI_CLASS "DJLEngine")
+-D SDENGINE_JNI=ON
+-D SDENGINE_JNI_CLASS=DJLEngine
 ```
 
-JNI memerlukan interface bertingkat bernama `DJLEngine$ProgressListener` dengan metode:
+Kelas Java memakai default package `DJLEngine`. Callback progres:
+`DJLEngine$ProgressListener.onProgress(float fraction, String stage): boolean`
 
-`boolean onProgress(float fraction, String stage)`
+Native methods mengikuti tabel registrasi upstream:
+- `nativeLoadModel(String)`
+- `nativePrepareInput(String, int, int, String, ProgressListener)`
+- `nativeAnalyze(String)`
+- `nativeSeparate(String, String, boolean[], int, int, boolean, ProgressListener)`
+- `nativeComputeInfo(int, boolean)`
+- `nativeCancel()`
 
-Signature dan nama ini harus dipertahankan bersama dengan tabel registrasi native di upstream.
+## Alur audio
 
-## Alur kerja
-
-1. Lua mencari DEX dan SO berdasarkan ABI, lalu menyalinnya ke direktori privat.
-2. Lua memuat kelas `DJLEngine` dengan `DexClassLoader`.
-3. Lua memanggil `muat(soPath)`; metode tersebut memanggil `System.load(absolutePath)`. JNI_OnLoad mendaftarkan native method pada kelas DEX yang sama.
-4. Jika model belum terpasang, adapter Lua menjalankan `unduhModel(url, statusPath)` pada worker Java. Data diunduh secara streaming ke folder privat, progres ditulis ke file status, dan checksum SHA-256 diverifikasi. `pasangModel(modelSourcePath)` juga tersedia untuk model lokal.
-5. Lua memanggil `mulai(audioPath, workDir, jobId)`. Metode ini memulai satu Java worker thread.
-6. Worker mendekode audio melalui MediaExtractor/MediaCodec menjadi file raw interleaved float32 secara bertahap.
-7. Worker memanggil native prepare dan separation; progres ditulis ke file status.
-8. Lua membaca status secara berkala dan tetap responsif.
-9. Lua memanggil `batal(workDir, jobId)` untuk membuat marker pembatalan dan meminta pembatalan native.
-
-Pekerjaan native dibatasi satu pada satu waktu karena pembatalan mesin upstream bersifat global.
+1. Java memuat model dan mendekode audio dengan MediaExtractor/MediaCodec.
+2. Decoder menulis PCM float32 interleaved ke file sementara secara bertahap.
+3. Native prepare mengubah audio menjadi stereo float32 44,1 kHz.
+4. Native separation memproses satu segmen pada satu waktu.
+5. Vulkan dicoba; jika tidak tersedia atau self-test gagal, CPU digunakan.
+6. Enam WAV ditulis pada direktori hasil.
+7. JSON hasil berisi path enam WAV.
+8. File PCM sementara dibersihkan pada akhir proses.
 
 ## Model
 
-Bridge mencari bobot di folder yang sama dengan pustaka SO:
+- Nama: `5c90dfd2.safetensors`
+- Model: Demucs v4.1.0 HTDemucs 6-stem
+- URL pinned: `https://huggingface.co/adefossez/HTDemucs-6s/resolve/3c5ee475be622df764938de97e4281a7b07ffa58/5c90dfd2.safetensors`
+- SHA-256: `d2a1745f0744721f6b8ca5bf469b67c651ea5ed1b52998cab033b2158609d411`
 
-`5c90dfd2.safetensors`
+Model tidak disimpan di Git dan tidak dimasukkan ke PPK. Java mengunduh ke file sementara, memverifikasi checksum, lalu memindahkan file ke lokasi final. Cache verifikasi menggunakan path, ukuran, dan waktu modifikasi agar file 55 MB tidak di-hash ulang setiap kali UI memeriksa status.
 
-Berkas tersebut adalah bobot Demucs v4.1.0 htdemucs_6s yang dirujuk upstream. SHA-256 yang harus diverifikasi sebelum digunakan:
+## Status pekerjaan
 
-`d2a1745f0744721f6b8ca5bf469b67c651ea5ed1b52998cab033b2158609d411`
-
-Lua perlu menyalin bobot secara streaming ke folder privat mesin; jangan memakai helper yang membaca seluruh 55 MB ke satu string Lua.
-
-## Input audio
-
-Decoder menulis PCM float32 interleaved ke file. Lagu tidak disimpan seluruhnya sebagai array Java. Mesin menyiapkan file itu menjadi stereo 44,1 kHz, kemudian memproses segmen dan menulis enam WAV.
-
-Format PCM yang saat ini ditangani bridge: float32, signed 16-bit, unsigned 8-bit, packed 24-bit, dan signed 32-bit. Format output decoder yang tidak dikenali harus menghasilkan pesan galat yang jelas, bukan diteruskan sebagai data rusak.
-
-## Status dan hasil
-
-Status ditulis sebagai satu baris UTF-8:
-
+File status memakai format:
 `state|percent|stage|message|timestamp`
 
-Nilai state mengikuti referensi Lua: `jalan`, `selesai`, `galat`, `batal`.
+State: `jalan`, `selesai`, `galat`, `batal`.
 
-Hasil JSON menyimpan path enam file WAV. Lua perlu membaca format hasil Vocal Remover ini, bukan memakai parser JSON hasil tempo/nada/chord pada ekstensi referensi.
+Lua memantau status melalui Handler pada thread UI. Native callback progres tidak memperbarui tampilan langsung; callback hanya menulis status secara teratur. UI mengumumkan perubahan tahap dan progres yang berubah.
 
 ## Batas validasi
 
-Kode bridge ini merupakan implementasi awal yang belum dikompilasi dengan Android SDK/NDK dan belum diuji pada Redmi 13C. DEX hasil build, signature JNI, decoder MediaCodec, pemulihan worker, serta aksesibilitas layar CSR harus diuji sebelum paket dinyatakan siap.
+- Build CI dapat mengompilasi pustaka JNI, DEX, dan sintaks Lua, tetapi belum menguji runtime CSR.
+- Pemanggilan JNI, decoder MediaCodec, Vulkan, pembatalan, pemulihan, serta navigasi screen reader harus diuji pada perangkat sasaran.
+- Hasil saat ini disimpan di direktori privat. Ekspor ke folder Musik bersama belum tersedia.
