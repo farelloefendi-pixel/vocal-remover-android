@@ -25,7 +25,7 @@ Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal diba
 
 ## Build otomatis
 
-[Melihat build dan artefak ekstensi PPK di GitHub Actions](https://github.com/farelloefendi-pixel/vocal-remover-android/actions)
+[Mengunduh artefak PPK development](https://github.com/farelloefendi-pixel/vocal-remover-android/actions/runs/44529097617/artifacts/14532888320) · [Melihat seluruh build](https://github.com/farelloefendi-pixel/vocal-remover-android/actions)
 
 Jika build terbaru berhasil, artefak development `Vocal_Remover_CSR_DEV.ppk` tersedia pada bagian Artifacts di halaman run. Paket ini hanya untuk menguji struktur dan antarmuka, belum dapat memisahkan audio karena model ditahan. Binary DEX dan SO juga disediakan terpisah untuk pemeriksaan.
 
