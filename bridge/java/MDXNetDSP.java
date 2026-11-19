@@ -8,9 +8,20 @@ final class MDXNetDSP {
     static final int TRIM = N_FFT / 2;
     static final int CHUNK = HOP * (DIM_T - 1);
     static final int GEN = CHUNK - 2 * TRIM;
+    static final float OVERLAP = 0.25f;
+    static final int STEP = Math.round(CHUNK * (1f - OVERLAP));
+    static final int BORDER = CHUNK - STEP;
     static final int TENSOR_SIZE = 4 * DIM_F * DIM_T;
 
     private MDXNetDSP() {
+    }
+
+    static float[] createBlendWindow() {
+        float[] window = new float[CHUNK];
+        for (int i = 0; i < CHUNK; i++) {
+            window[i] = (float) (0.5d - 0.5d * Math.cos(2d * Math.PI * i / (CHUNK - 1)));
+        }
+        return window;
     }
 
     static float[] createWindow() {
