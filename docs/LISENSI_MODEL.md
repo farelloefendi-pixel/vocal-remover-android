@@ -2,11 +2,13 @@
 
 Tanggal pemeriksaan: 19 November 2026.
 
-## Ringkasan keputusan
+## Keputusan produk saat ini
 
-**Bobot Demucs HTDemucs 6-stem tidak boleh diasumsikan berlisensi MIT.** Kode mesin C++ berlisensi MIT, tetapi bobot model merupakan aset terpisah. Pemelihara Demucs menyatakan secara langsung bahwa bobot tidak tercakup lisensi MIT dan hanya disediakan untuk tujuan ilmiah.
+Model utama yang dipilih untuk proyek ini adalah **Kim Vocal 2 MDX-Net dalam format ONNX asli**, dengan keluaran hanya `vocals.wav` dan `instrumental.wav`. Pengguna menyatakan telah memperoleh izin tertulis dari pembuat model untuk penggunaan komersial pada **2 Oktober 2026**. Izin tertulis tersebut adalah dasar izin khusus yang harus disimpan bersama arsip rilis dan atribusi; metadata MIT pada repositori mirror tidak boleh dianggap sebagai satu-satunya bukti hak atas bobot.
 
-Karena proyek ini ditujukan untuk pemisahan musik pribadi dan belum ada dasar yang memastikan penggunaan tersebut termasuk tujuan ilmiah, pengunduhan otomatis dan penggunaan model HTDemucs ditahan sampai hak penggunaan yang sesuai jelas. Paket PPK tidak boleh dipromosikan sebagai rilis siap pakai dengan model tersebut.
+Sebelum rilis, simpan bukti izin asli, pastikan izin itu secara eksplisit mencakup file/checkpoint Kim Vocal 2 yang digunakan, konversi ONNX, distribusi melalui ekstensi, dan penggunaan komersial yang dimaksud. Jangan mengganti model atau formatnya tanpa persetujuan pengguna.
+
+HTDemucs 6-stem bukan lagi model produk. Audit lisensinya di bawah tetap dicatat sebagai pembelajaran historis dan alasan mengapa mesin lama tidak boleh dipakai.
 
 ## Bukti primer
 
@@ -87,11 +89,11 @@ Pernyataan MIT ini belum menyelesaikan konflik hak bobot. Issue resmi Demucs #32
 - Skrip inferensi: https://huggingface.co/StemSplitio/htdemucs-6s-onnx/blob/main/infer.py
 - Issue lisensi bobot Demucs #327: https://github.com/facebookresearch/demucs/issues/327
 
-## Keputusan yang masih diperlukan
+## Keputusan yang sudah dikunci
 
-Belum ditemukan model enam stem alternatif yang sekaligus:
-- mempunyai izin bobot yang jelas untuk tujuan penggunaan yang dimaksud;
-- memiliki kualitas yang sesuai target;
-- dapat dijalankan secara offline di perangkat ARM64 dengan RAM 6 GB.
-
-Sebelum mengganti mesin atau mengaktifkan model apa pun, tentukan apakah target harus tetap enam stem, atau boleh turun sementara menjadi lima stem Spleeter / empat stem Open-Unmix.
+- Kim Vocal 2 MDX-Net ONNX asli adalah model utama.
+- Produk hanya menghasilkan vocals dan instrumental.
+- HTDemucs, Spleeter, Open-Unmix, BS-RoFormer, dan model enam stem lain bukan pengganti otomatis; bagian di atas hanya catatan audit kandidat historis.
+- Mesin HTDemucs lama tetap diblokir dan tidak boleh dijalankan dengan file Kim Vocal 2.
+- Izin tertulis dari pembuat Kim Vocal 2 bertanggal 2 Oktober 2026 harus diarsipkan sebagai bukti utama sebelum paket komersial didistribusikan.
+- Model dan pemisahan belum boleh diaktifkan sampai pipeline Kim Vocal 2 benar-benar selesai, lolos build, dan diuji.
