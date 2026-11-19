@@ -72,7 +72,7 @@ Jangan menyatakan ekstensi siap pakai sebelum mesin native, model, enam keluaran
 - [x] Tambahkan workflow GitHub Actions untuk membangun `DJLEngine.dex` dan `libdjl64.so`.
 - [x] Pastikan workflow build ARM64 lulus untuk C++ JNI dan Java DEX.
 - [x] Verifikasi output ELF AArch64 dan berkas Dalvik DEX; artefak CI berhasil diunggah.
-- [ ] Uji pemuatan DEX/SO dan pemanggilan JNI di perangkat Android nyata sebelum membuat paket PPK.
+- [ ] Uji pemuatan DEX/SO dan pemanggilan JNI di perangkat Android nyata sebelum membuat PPK rilis; PPK yang tersedia sekarang hanya development.
 
 ## Implementasi UI dan model
 
