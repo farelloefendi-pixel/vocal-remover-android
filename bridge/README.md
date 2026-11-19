@@ -54,7 +54,7 @@ Native methods mengikuti tabel registrasi upstream:
 - `nativeLoadModel(String)`
 - `nativePrepareInput(String, int, int, String, ProgressListener)`
 - `nativeAnalyze(String)`
-- `nativeSeparate(String, String, boolean[], int, int, boolean, ProgressListener)`
+- `nativeSeparate(String, String, boolean[], int, int, boolean, ProgressListener)` (jalur Demucs lama, tidak dipakai oleh inferensi ONNX)
 - `nativeComputeInfo(int, boolean)`
 - `nativeCancel()`
 
@@ -68,7 +68,7 @@ Native methods mengikuti tabel registrasi upstream:
 
 ## Model dan lisensi
 
-Bridge pernah disiapkan untuk model `5c90dfd2.safetensors`, tetapi adapter Lua kini mengunci `MODEL_ENABLED=false`. Pengunduhan, pemasangan, dan pemakaian HTDemucs tidak diaktifkan sampai dasar lisensi bobot sesuai tujuan penggunaan dipastikan. Rincian bukti dan alternatif ada di `docs/LISENSI_MODEL.md`.
+Bridge kini diarahkan ke kandidat `htdemucs_6s_fp16weights.onnx` dan memverifikasi SHA-256 berkas tersebut. Adapter Lua tetap mengunci `MODEL_ENABLED=false`; pengunduhan dan pemisahan belum dapat diaktifkan sampai dasar hak penggunaan bobot ONNX hasil konversi sesuai tujuan komersial dipastikan. Rincian bukti dan alternatif ada di `docs/LISENSI_MODEL.md`.
 
 ## Status pekerjaan
 
