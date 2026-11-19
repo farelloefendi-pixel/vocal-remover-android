@@ -346,7 +346,7 @@ function M.ambilHasil(id)
   local ok, hasil = pcall(function()
     local json = luajava.bindClass("org.json.JSONObject")(isi)
     local outputs = json.getJSONObject("outputs")
-    local nama = { "vocals", "drums", "bass", "other", "guitar", "piano" }
+    local nama = { "vocals", "drums", "bass", "other", "guitar", "piano", "instrumental" }
     local daftar = {}
     for _, k in ipairs(nama) do
       local path = outputs.getString(k)
