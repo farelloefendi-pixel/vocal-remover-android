@@ -59,10 +59,29 @@ jobs:
           assert output_shape[0] in (1, None, "batch_size"), output_shape
           assert input_shape[1:] == expected[1:], input_shape
           assert output_shape[1:] == expected[1:], output_shape
-          output = session.run(["output"], {"input": np.zeros(expected, dtype=np.float32)})[0]
+          n_fft, hop, chunk = 7680, 1024, 1024 * 255
+          t = np.arange(chunk, dtype=np.float32) / 44100.0
+          left = 0.20 * np.sin(2 * np.pi * 440 * t) + 0.05 * np.sin(2 * np.pi * 997 * t)
+          right = 0.17 * np.cos(2 * np.pi * 311 * t)
+          window = 0.5 - 0.5 * np.cos(2 * np.pi * np.arange(n_fft) / n_fft)
+          def spectrum(channel):
+              padded = np.pad(channel, (n_fft // 2, n_fft // 2), mode="reflect")
+              frames = np.stack([padded[i * hop:i * hop + n_fft] for i in range(256)])
+              return np.fft.rfft(frames * window[None, :], axis=1)
+          left_spec = spectrum(left)
+          right_spec = spectrum(right)
+          tensor = np.stack([
+              left_spec.real[:, :3072].T,
+              left_spec.imag[:, :3072].T,
+              right_spec.real[:, :3072].T,
+              right_spec.imag[:, :3072].T,
+          ], axis=0)[None].astype(np.float32)
+          assert tensor.shape == tuple(expected), tensor.shape
+          output = session.run(["output"], {"input": tensor})[0]
           assert output.shape == tuple(expected), output.shape
           assert np.isfinite(output).all()
-          print("Kim Vocal 2 ONNX inference OK:", output.shape)
+          assert np.max(np.abs(output)) > 0
+          print("Kim Vocal 2 ONNX non-zero audio inference OK:", output.shape)
           PY
 
       - name: Compile Java bridge
