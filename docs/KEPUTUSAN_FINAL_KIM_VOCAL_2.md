@@ -99,3 +99,23 @@ Audit sumber menemukan implementasi Java yang masih:
 Bridge Lua juga masih menonaktifkan model dengan alasan lisensi HTDemucs, sedangkan workflow CI masih mengambil dan membangun mesin Demucs. Seluruh bagian tersebut wajib diganti secara terkoordinasi. Mengganti file model atau checksum saja tidak menghasilkan implementasi Kim Vocal 2 yang benar.
 
 Karena itu, artefak CI lama tidak boleh dipakai untuk pengujian pengguna. Implementasi baru perlu memasukkan STFT/iSTFT MDX-Net dan inferensi ONNX dua-stem, kemudian menjalani uji build serta audio nyata sebelum paket PPK diterbitkan.
+
+
+## Geometri segmen dan rekonstruksi audio
+
+Untuk parameter Kim Vocal 2 yang dikunci:
+
+- `chunk_size = hop_length × (dim_t − 1) = 261120` sampel.
+- `trim = n_fft / 2 = 3840` sampel di setiap sisi.
+- Bagian tengah yang dapat disumbangkan setiap segmen: `gen_size = chunk_size − 2 × trim = 253440` sampel.
+- Durasi bagian tengah tersebut sekitar 5,747 detik pada 44,1 kHz.
+- Spektrum memiliki 3072 bin yang dipakai, yaitu bin 0 sampai 3071; bin Nyquist tidak masuk tensor.
+- Layout tensor datar row-major: `((plane × 3072) + bin) × 256 + frame`, dengan urutan bidang `L_re, L_im, R_re, R_im`.
+
+Penting: 261120 sampel adalah ukuran masukan satu segmen STFT, bukan jumlah sampel keluaran unik yang boleh langsung ditulis ke WAV. Rekonstruksi harus membuang area tepi 3840 sampel pada masing-masing sisi, lalu menggabungkan bagian tengah secara overlap-add. Jangan menggunakan stride atau overlap HTDemucs lama.
+
+Rancangan implementasi memakai pemrosesan segmen dengan crossfade dan normalisasi envelope agar batas segmen tidak menimbulkan klik. Nilai overlap final harus ditetapkan berdasarkan uji numerik terhadap implementasi UVR untuk Kim Vocal 2; angka overlap dari model lain tidak boleh dianggap otomatis identik. Seluruh audio harus dipertahankan tepat sepanjang durasi masukan.
+
+## Perubahan antarmuka dua-stem
+
+Antarmuka Lua dan pembaca hasil kini diarahkan hanya ke dua keluaran: vokal dan instrumental. Pesan lama yang menyebut enam stem/HTDemucs pada layar hasil telah diganti. Ini hanya penyelarasan UI; mesin Java masih perlu diganti sebelum tombol pemisahan dapat diaktifkan.
