@@ -349,7 +349,7 @@ public final class DJLEngine {
             @Override
             public void run() {
                 try {
-                    android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+                    android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DEFAULT);
                 } catch (Throwable ignored) {
                 }
                 kerjakan(audioPath, workDir, id);
@@ -630,6 +630,7 @@ public final class DJLEngine {
             float[] envelope = MDXNetDSP.createEnvelope(window);
             float[] blendWindow = MDXNetDSP.createBlendWindow();
             MDXNetDSP.BluesteinFFT fft = new MDXNetDSP.BluesteinFFT(MDXNetDSP.N_FFT);
+            MDXNetDSP.Workspace dspWorkspace = new MDXNetDSP.Workspace();
             float[] left = new float[MDXNetDSP.CHUNK];
             float[] right = new float[MDXNetDSP.CHUNK];
             float[] vocalLeft = new float[MDXNetDSP.CHUNK];
@@ -671,7 +672,7 @@ public final class DJLEngine {
                     }
                 }
 
-                MDXNetDSP.createInput(left, right, tensorData, window, fft);
+                MDXNetDSP.createInput(left, right, tensorData, window, fft, dspWorkspace);
                 try (OnnxTensor input = OnnxTensor.createTensor(
                             ortEnvironment, tensorData, expectedShape)) {
                     Map<String, OnnxTensor> feeds = new HashMap<>();
@@ -687,9 +688,9 @@ public final class DJLEngine {
                             throw new IOException("Buffer output Kim Vocal 2 tidak lengkap");
                         }
                         MDXNetDSP.synthesize(values, 0, vocalLeft, window, envelope, fft,
-                                () -> checkCancelled(cancel));
+                                () -> checkCancelled(cancel), dspWorkspace);
                         MDXNetDSP.synthesize(values, 1, vocalRight, window, envelope, fft,
-                                () -> checkCancelled(cancel));
+                                () -> checkCancelled(cancel), dspWorkspace);
                     }
                 }
 
