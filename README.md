@@ -25,19 +25,21 @@ Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal diba
 
 ## Build otomatis
 
-[Mengunduh artefak PPK development](https://github.com/farelloefendi-pixel/vocal-remover-android/actions/runs/44530662056/artifacts/14534425274) · [Melihat seluruh build](https://github.com/farelloefendi-pixel/vocal-remover-android/actions)
+<https://github.com/farelloefendi-pixel/vocal-remover-android/actions/runs/44531097879>
 
-Jika build terbaru berhasil, artefak development `Vocal_Remover_CSR_DEV.ppk` tersedia pada bagian Artifacts di halaman run. Paket ini hanya untuk menguji struktur dan antarmuka, belum dapat memisahkan audio karena model ditahan. Binary DEX dan SO juga disediakan terpisah untuk pemeriksaan.
+[Unduh artefak PPK development](https://github.com/farelloefendi-pixel/vocal-remover-android/actions/runs/44531097879/artifacts/14534306372)
+
+Build terbaru **berhasil** pada 19 November 2026. Artefak `vocal-remover-csr-dev-arm64` berisi `Vocal_Remover_CSR_DEV.ppk`, DEX, library ARM64, dan informasi build. Paket ini dapat digunakan untuk menguji pemuatan ekstensi, menu, navigasi pembaca layar, serta pemilih audio. Paket ini **belum dapat memisahkan audio** karena model belum diaktifkan.
 
 ## Status model
 
-Mesin HTDemucs 6-stem dipertahankan sebagai prototipe kode, tetapi penggunaan bobotnya ditahan karena pemelihara Demucs menyatakan bobot tidak tercakup MIT dan hanya disediakan untuk tujuan ilmiah. Pengunduhan otomatis dinonaktifkan. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan alternatif yang sedang dinilai.
+Mesin HTDemucs 6-stem dipertahankan sebagai prototipe kode, tetapi penggunaan bobotnya ditahan karena pemelihara Demucs menyatakan bobot tidak tercakup MIT dan hanya disediakan untuk tujuan ilmiah. Pengunduhan otomatis dinonaktifkan. Ekspor ONNX yang mengklaim MIT juga belum otomatis menyelesaikan persoalan hak bobot asalnya. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan alternatif yang sedang dinilai.
 
 ## Batas validasi
 
 - Build CI membuktikan kode dapat dikompilasi dan dikemas; itu belum membuktikan pemisahan audio berhasil di Redmi 13C.
-- Pemuatan DEX/SO, JNI, MediaCodec, Vulkan/CPU, pembatalan, dan pemulihan masih perlu uji perangkat nyata. PPK saat ini adalah paket development, bukan rilis yang berfungsi penuh.
-- Setelah model pengganti diaktifkan, hasil dirancang disimpan pada direktori privat dan diputar dari menu hasil. Build development saat ini belum menghasilkan stem. Ekspor ke folder Musik bersama masih perlu diselesaikan.
+- Pemuatan DEX/SO, JNI, MediaCodec, Vulkan/CPU, pembatalan, dan pemulihan masih perlu uji perangkat nyata.
+- Build development saat ini belum menghasilkan stem. Ekspor ke folder Musik bersama masih perlu diselesaikan.
 - HTDemucs 6S tidak memiliki stem rebab khusus. Rebab, suling, gender, saron, bonang, dan instrumen tradisional lain harus diuji; tidak ada jaminan semuanya akan selalu terpisah sempurna.
 
 ## Dokumen
