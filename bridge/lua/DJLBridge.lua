@@ -291,7 +291,8 @@ function M.mulaiPemisahan(audioPath, id)
   end
   if not id or id == "" then
     urutan = urutan + 1
-    id = "vr" .. tostring(os.time()) .. "_" .. tostring(urutan)
+    local SystemJ = luajava.bindClass("java.lang.System")
+    id = "vr" .. tostring(SystemJ.currentTimeMillis()) .. "_" .. tostring(SystemJ.nanoTime()) .. "_" .. tostring(urutan)
   end
   local ok, hasil = pcall(function()
     return M.panggil(kls, "mulai", 3, { audioPath, kerja, id })
