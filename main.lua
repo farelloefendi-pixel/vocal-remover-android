@@ -211,8 +211,8 @@ tampilHasil = function(id, pathLagu)
     local status = item.tersedia and "tersedia" or "tidak ditemukan"
     butir[i] = item.nama .. ", " .. status
   end
-  butir[#butir + 1] = "Hapus enam hasil pemisahan"
-  layarDaftar("Enam hasil pemisahan", butir, function(i)
+  butir[#butir + 1] = "Hapus tujuh file hasil"
+  layarDaftar("Enam stem dan instrumental", butir, function(i)
     if i <= #daftar then
       local item = daftar[i]
       if not item.tersedia then
@@ -225,7 +225,7 @@ tampilHasil = function(id, pathLagu)
         { "Kembali", function() tampilHasil(id, pathLagu) end }
       }, function() tampilHasil(id, pathLagu) end)
     else
-      dialogPesan("Hapus hasil", "Hapus keenam file WAV untuk lagu ini?", {
+      dialogPesan("Hapus hasil", "Hapus keenam stem dan file instrumental untuk lagu ini?", {
         { "Hapus", function()
           Bridge.hapusHasil(id)
           hasilTerakhir = nil
@@ -508,7 +508,7 @@ end
 menuUtama = function()
   local butir = {
     "Pilih audio untuk dipisahkan",
-    "Lihat enam stem hasil terakhir",
+    "Lihat enam stem dan instrumental terakhir",
     "Status mesin dan model",
     "Pengaturan dan informasi",
     "Tutup"
