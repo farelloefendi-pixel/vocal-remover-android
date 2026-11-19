@@ -57,6 +57,7 @@ jobs:
             -classpath "$ANDROID_HOME/platforms/android-35/android.jar" \
             -d build-java/classes bridge/java/DJLEngine.java
           javap -classpath build-java/classes -s -p DJLEngine > dist/JNI_SIGNATURES.txt
+          javap -classpath build-java/classes -s -p 'DJLEngine$ProgressListener' >> dist/JNI_SIGNATURES.txt
           grep -Fq 'descriptor: (Ljava/lang/String;IILjava/lang/String;LDJLEngine$ProgressListener;)Ljava/lang/String;' dist/JNI_SIGNATURES.txt
           grep -Fq 'descriptor: (Ljava/lang/String;Ljava/lang/String;[ZIIZLDJLEngine$ProgressListener;)[D' dist/JNI_SIGNATURES.txt
           grep -Fq 'descriptor: (FLjava/lang/String;)Z' dist/JNI_SIGNATURES.txt
