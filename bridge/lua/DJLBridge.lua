@@ -22,6 +22,13 @@ local threadUnduh
 local unduhAktif = false
 local urutan = 0
 
+local function panjangLarik(a)
+  local n = 0
+  local ok = pcall(function() n = a.length end)
+  if not ok or type(n) ~= "number" then pcall(function() n = #a end) end
+  return n
+end
+
 local function berkas(path)
   local f = io.open(path, "rb")
   if not f then return nil end
@@ -339,7 +346,7 @@ local function hapusPohon(file)
   if file.isDirectory() then
     local isi = file.listFiles()
     if isi ~= nil then
-      for i = 0, isi.length - 1 do hapusPohon(isi[i]) end
+      for i = 0, panjangLarik(isi) - 1 do hapusPohon(isi[i]) end
     end
   end
   file.delete()
