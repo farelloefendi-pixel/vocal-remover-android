@@ -329,11 +329,16 @@ mulaiUnduhModel = function(pathLagu)
   end)
   bukaDialog(d)
   local teksLama = ""
+  local tahapLama = nil
   local function periksa()
     if not unduhPantau then return end
     local s = Bridge.statusModel()
     if s then
       local teks = s.persen .. " persen. " .. tostring(s.tahap) .. ". " .. tostring(s.pesan)
+      if s.tahap and s.tahap ~= "" and s.tahap ~= tahapLama then
+        tahapLama = s.tahap
+        toast(s.tahap)
+      end
       if teks ~= teksLama then
         teksLama = teks
         pcall(function() d.setMessage(teks) end)
@@ -384,12 +389,17 @@ pantau = function(id, path)
   end)
   bukaDialog(d)
   local teksLama = ""
+  local tahapLama = nil
   local mulai = os.time()
   local function periksa()
     if pantauId ~= id then return end
     local s = Bridge.status(id)
     if s then
       local teks = s.persen .. " persen. " .. tostring(s.tahap) .. ". " .. tostring(s.pesan)
+      if s.tahap and s.tahap ~= "" and s.tahap ~= tahapLama then
+        tahapLama = s.tahap
+        toast(s.tahap)
+      end
       if teks ~= teksLama then
         teksLama = teks
         pcall(function() d.setMessage(teks) end)
