@@ -8,18 +8,16 @@ Paket PPK harus berisi:
 - `libdjl64.so` untuk Android ARM64
 - `bridge/lua/DJLBridge.lua`
 
-Model `5c90dfd2.safetensors` tidak dimasukkan ke paket. Ekstensi mengunduhnya saat pertama kali diminta.
+Model `5c90dfd2.safetensors` tidak dimasukkan ke paket. Penggunaan dan pengunduhan bobot HTDemucs dinonaktifkan sementara karena lisensi bobot belum jelas untuk penggunaan umum.
 
 ## Alur pengguna
 
 1. Buka ekstensi Vocal Remover CSR.
 2. Pilih **Pilih audio untuk dipisahkan**.
 3. Jelajahi penyimpanan dan pilih satu berkas audio.
-4. Jika model belum tersedia, pilih **Unduh model**. Unduhan sekitar 55 MB dan memerlukan internet satu kali.
-5. Tunggu verifikasi checksum model selesai.
-6. Mesin memulai pemisahan dan menampilkan progres serta tahap yang sedang dikerjakan.
-7. Tombol **Batalkan** meminta worker menghentikan proses secara kooperatif.
-8. Setelah selesai, pilih salah satu dari enam stem untuk memutarnya atau menyalin lokasi berkas.
+4. Pada build development saat ini, layar akan menjelaskan bahwa model belum diaktifkan karena status lisensinya.
+5. Pemisahan audio belum dapat dijalankan sampai model alternatif dipilih dan diintegrasikan.
+6. Setelah mesin pengganti tersedia, alur progres, pembatalan, dan enam hasil akan diaktifkan kembali.
 
 ## Format yang diterima
 
