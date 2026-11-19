@@ -56,7 +56,8 @@ Catat:
 
 ## Tahap 5 — rilis
 
-- [x] Audit lisensi kode dan dependensi; model HTDemucs ditahan karena batas lisensi bobot.\n- [ ] Audit lisensi dan atribusi model alternatif sebelum dipakai.
+- [x] Audit lisensi kode dan dependensi; model HTDemucs ditahan karena batas lisensi bobot.
+- [ ] Audit lisensi dan atribusi model alternatif sebelum dipakai.
 - [x] Siapkan build binary ARM64 dan DEX otomatis; uji perangkat masih diperlukan.
 - [x] Tambahkan pengemasan PPK otomatis pada workflow CI; uji instalasi masih diperlukan.
 - [ ] Uji instalasi PPK, upgrade, pembatalan, ekspor hasil, dan penghapusan.
