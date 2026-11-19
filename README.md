@@ -37,7 +37,7 @@ Mesin HTDemucs 6-stem dipertahankan sebagai prototipe kode, tetapi penggunaan bo
 
 - Build CI membuktikan kode dapat dikompilasi dan dikemas; itu belum membuktikan pemisahan audio berhasil di Redmi 13C.
 - Pemuatan DEX/SO, JNI, MediaCodec, Vulkan/CPU, pembatalan, dan pemulihan masih perlu uji perangkat nyata. PPK saat ini adalah paket development, bukan rilis yang berfungsi penuh.
-- Hasil saat ini disimpan pada direktori privat ekstensi dan dapat diputar dari menu hasil. Fitur ekspor ke folder musik bersama masih perlu diselesaikan dan diuji.
+- Setelah model pengganti diaktifkan, hasil dirancang disimpan pada direktori privat dan diputar dari menu hasil. Build development saat ini belum menghasilkan stem. Ekspor ke folder Musik bersama masih perlu diselesaikan.
 - HTDemucs 6S tidak memiliki stem rebab khusus. Rebab, suling, gender, saron, bonang, dan instrumen tradisional lain harus diuji; tidak ada jaminan semuanya akan selalu terpisah sempurna.
 
 ## Dokumen
