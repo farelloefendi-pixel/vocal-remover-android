@@ -124,63 +124,99 @@ end
 function M.siapkan()
   if not ctx then return nil, "Context CSR belum diinisialisasi" end
   local properties = System.getProperties()
-  local tersimpan = properties.get("vocalremover.kimmdx.ort131.v4")
-  if tersimpan ~= nil then
+  local cacheKey = "vocalremover.kimmdx.ort131.v4"
+  local tersimpan = properties.get(cacheKey)
+  if tersimpan ~= nil and tostring(tersimpan) ~= "LOADING" then
     kelas = tersimpan
     return kelas
   end
 
-  local dex, so, ort, ortJni, namaSo, calon = sumberMesin()
-  if not dex then
-    local daftar = {}
-    for _, path in ipairs(calon or {}) do daftar[#daftar + 1] = path end
-    return nil, "Berkas mesin tidak lengkap. Letakkan DJLEngine.dex, "
-      .. namaSo .. ", libonnxruntime.so, dan libonnxruntime4j_jni.so di folder ekstensi. Folder yang diperiksa: "
-      .. table.concat(daftar, ", ")
+  if tersimpan == nil then
+    local okKlaim, sebelumnya = pcall(function()
+      return properties.putIfAbsent(cacheKey, "LOADING")
+    end)
+    if not okKlaim then
+      return nil, "Tidak dapat mengunci pemuatan mesin: " .. tostring(sebelumnya)
+    end
+    if sebelumnya ~= nil then
+      if tostring(sebelumnya) ~= "LOADING" then
+        kelas = sebelumnya
+        return kelas
+      end
+      for i = 1, 200 do
+        Thread.sleep(100)
+        local sekarang = properties.get(cacheKey)
+        if sekarang ~= nil and tostring(sekarang) ~= "LOADING" then
+          kelas = sekarang
+          return kelas
+        end
+        if sekarang == nil then break end
+      end
+      return nil, "Pemuatan mesin lain belum selesai. Silakan coba kembali."
+    end
+  else
+    for i = 1, 200 do
+      Thread.sleep(100)
+      local sekarang = properties.get(cacheKey)
+      if sekarang ~= nil and tostring(sekarang) ~= "LOADING" then
+        kelas = sekarang
+        return kelas
+      end
+      if sekarang == nil then break end
+    end
+    return nil, "Pemuatan mesin lain belum selesai. Silakan coba kembali."
   end
 
-  folder = folderCache("vocal_remover_engine")
-  pcall(function() File(folder .. "/odex").mkdirs() end)
-  local dexTujuan = folder .. "/DJLEngine_" .. stempel(dex) .. ".dex"
-  local soTujuan = folder .. "/libdjl_" .. stempel(so) .. ".so"
-  local ortFolder = folder .. "/ort_" .. stempel(ort .. ortJni)
-  pcall(function() File(ortFolder).mkdirs() end)
-  local ortTujuan = ortFolder .. "/libonnxruntime.so"
-  local ortJniTujuan = ortFolder .. "/libonnxruntime4j_jni.so"
+  local sukses, hasil, pesan = pcall(function()
+    local dex, so, ort, ortJni, namaSo, calon = sumberMesin()
+    if not dex then
+      local daftar = {}
+      for _, path in ipairs(calon or {}) do daftar[#daftar + 1] = path end
+      return nil, "Berkas mesin tidak lengkap. Letakkan DJLEngine.dex, "
+        .. namaSo .. ", libonnxruntime.so, dan libonnxruntime4j_jni.so di folder ekstensi. Folder yang diperiksa: "
+        .. table.concat(daftar, ", ")
+    end
 
-  if not berkas(dexTujuan) and not salin(dex, dexTujuan) then
-    return nil, "Gagal menyalin DJLEngine.dex ke cache internal"
-  end
-  if not berkas(soTujuan) and not salin(so, soTujuan) then
-    return nil, "Gagal menyalin " .. namaSo .. " ke cache internal"
-  end
-  if not berkas(ortTujuan) and not salin(ort, ortTujuan) then
-    return nil, "Gagal menyalin libonnxruntime.so ke cache internal"
-  end
-  if not berkas(ortJniTujuan) and not salin(ortJni, ortJniTujuan) then
-    return nil, "Gagal menyalin libonnxruntime4j_jni.so ke cache internal"
-  end
+    folder = folderCache("vocal_remover_engine")
+    pcall(function() File(folder .. "/odex").mkdirs() end)
+    local dexTujuan = folder .. "/DJLEngine_" .. stempel(dex) .. ".dex"
+    local soTujuan = folder .. "/libdjl_" .. stempel(so) .. ".so"
+    local ortFolder = folder .. "/ort_" .. stempel(ort .. ortJni)
+    pcall(function() File(ortFolder).mkdirs() end)
+    local ortTujuan = ortFolder .. "/libonnxruntime.so"
+    local ortJniTujuan = ortFolder .. "/libonnxruntime4j_jni.so"
 
-  local ok, hasil = pcall(function()
+    if not berkas(dexTujuan) and not salin(dex, dexTujuan) then
+      return nil, "Gagal menyalin DJLEngine.dex ke cache internal"
+    end
+    if not berkas(soTujuan) and not salin(so, soTujuan) then
+      return nil, "Gagal menyalin " .. namaSo .. " ke cache internal"
+    end
+    if not berkas(ortTujuan) and not salin(ort, ortTujuan) then
+      return nil, "Gagal menyalin libonnxruntime.so ke cache internal"
+    end
+    if not berkas(ortJniTujuan) and not salin(ortJni, ortJniTujuan) then
+      return nil, "Gagal menyalin libonnxruntime4j_jni.so ke cache internal"
+    end
+
     local pemuat = luajava.bindClass("dalvik.system.DexClassLoader")(
       dexTujuan, folder .. "/odex", ortFolder, ctx.getClassLoader())
-    return pemuat.loadClass("DJLEngine")
+    local hasilKelas = pemuat.loadClass("DJLEngine")
+    local hasilMuat = M.panggil(hasilKelas, "muat", 2, { soTujuan, ortFolder })
+    if string.sub(hasilMuat, 1, 2) ~= "OK" then
+      return nil, "Mesin C++ tidak bisa dimuat: "
+        .. tostring(string.match(hasilMuat, "|(.*)") or hasilMuat)
+    end
+    return hasilKelas, hasilMuat
   end)
-  if not ok or hasil == nil then
-    return nil, "Gagal memuat DJLEngine.dex: " .. tostring(hasil)
-  end
 
-  local okMuat, pesan = pcall(function()
-    return M.panggil(hasil, "muat", 2, { soTujuan, ortFolder })
-  end)
-  if not okMuat then return nil, "Gagal memuat mesin C++: " .. tostring(pesan) end
-  if string.sub(pesan, 1, 2) ~= "OK" then
-    return nil, "Mesin C++ tidak bisa dimuat: "
-      .. tostring(string.match(pesan, "|(.*)") or pesan)
+  if not sukses or hasil == nil then
+    pcall(function() properties.remove(cacheKey) end)
+    return nil, tostring(pesan or hasil)
   end
 
   kelas = hasil
-  properties.put("vocalremover.kimmdx.ort131.v4", kelas)
+  properties.put(cacheKey, kelas)
   return kelas, pesan
 end
 
