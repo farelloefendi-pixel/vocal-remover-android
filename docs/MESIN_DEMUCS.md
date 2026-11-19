@@ -90,3 +90,7 @@ Berkas lisensi upstream menyebut mesin repository MIT dengan atribusi Jeroen Paa
 Model 6-stem tidak memiliki kategori khusus rebab atau instrumen gamelan. README resmi Demucs memperingatkan bahwa stem piano pada model enam sumber masih memiliki kualitas yang kurang baik dan artefak/bocoran. Karena itu, enam keluaran adalah format model, bukan jaminan bahwa setiap instrumen akan terpisah bersih.
 
 Pengujian musik Jawa tetap wajib, terutama untuk mengukur apakah rebab atau suling ikut masuk ke stem vocals.
+
+## Catatan lisensi bobot
+
+Walaupun kode mesin Android dan port demucs.cpp berlisensi MIT, pemelihara Demucs menyatakan bobot pretrained tidak tercakup MIT dan hanya disediakan untuk tujuan ilmiah: https://github.com/facebookresearch/demucs/issues/327#issuecomment-1134828611. Oleh karena itu, bobot `5c90dfd2.safetensors` tidak boleh dianggap bebas untuk penggunaan umum. Pengunduhan otomatis dan pemakaiannya dinonaktifkan sampai hak penggunaan yang sesuai dipastikan. Lihat `docs/LISENSI_MODEL.md`.
