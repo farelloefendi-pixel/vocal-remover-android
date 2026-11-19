@@ -28,6 +28,19 @@ jobs:
         run: |
           sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
 
+      - name: Fetch ONNX Runtime Android AAR
+        run: |
+          mkdir -p build-ort
+          curl --fail --location --retry 3 \
+            https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.32.0/onnxruntime-android-1.32.0.aar \
+            --output build-ort/onnxruntime-android.aar
+          mkdir -p build-ort/unpacked
+          unzip -q build-ort/onnxruntime-android.aar -d build-ort/unpacked
+          test -s build-ort/unpacked/classes.jar
+          test -s build-ort/unpacked/jni/arm64-v8a/libonnxruntime.so
+          cp build-ort/unpacked/jni/arm64-v8a/libonnxruntime.so dist-libonnxruntime.so
+          sha256sum build-ort/onnxruntime-android.aar dist-libonnxruntime.so
+
       - name: Fetch pinned Demucs C++ engine
         run: |
           git clone https://github.com/jPaauwe/demucs-android.git third_party/demucs-android
@@ -55,7 +68,7 @@ jobs:
         run: |
           mkdir -p build-java/classes dist
           javac -source 8 -target 8 \
-            -classpath "$ANDROID_HOME/platforms/android-35/android.jar" \
+            -classpath "$ANDROID_HOME/platforms/android-35/android.jar:build-ort/unpacked/classes.jar" \
             -d build-java/classes bridge/java/DJLEngine.java
           javap -classpath build-java/classes -s -p DJLEngine > dist/JNI_SIGNATURES.txt
           javap -classpath build-java/classes -s -p 'DJLEngine$ProgressListener' >> dist/JNI_SIGNATURES.txt
@@ -65,7 +78,7 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/d8" \
             --min-api 29 \
             --lib "$ANDROID_HOME/platforms/android-35/android.jar" \
-            --output dist build-java/classes/DJLEngine*.class
+            --output dist build-java/classes/DJLEngine*.class build-ort/unpacked/classes.jar
           test -s dist/classes.dex
           mv dist/classes.dex dist/DJLEngine.dex
 
@@ -80,14 +93,15 @@ jobs:
         run: |
           mkdir -p dist/bridge/lua dist/licenses
           cp main.lua dist/main.lua
+          cp dist-libonnxruntime.so dist/libonnxruntime.so
           cp bridge/lua/DJLBridge.lua dist/bridge/lua/DJLBridge.lua
           cp licenses/* dist/licenses/
           file dist/libdjl64.so dist/DJLEngine.dex
           readelf -h dist/libdjl64.so | grep -E 'Class:|Machine:'
           readelf -l dist/libdjl64.so | tee dist/ELF_PROGRAM_HEADERS.txt
           grep -q '0x4000' dist/ELF_PROGRAM_HEADERS.txt
-          sha256sum dist/libdjl64.so dist/DJLEngine.dex | tee dist/SHA256SUMS.txt
-          (cd dist && zip -q -r Vocal_Remover_CSR_DEV.ppk main.lua DJLEngine.dex libdjl64.so bridge/lua/DJLBridge.lua licenses)
+          sha256sum dist/libdjl64.so dist/libonnxruntime.so dist/DJLEngine.dex | tee dist/SHA256SUMS.txt
+          (cd dist && zip -q -r Vocal_Remover_CSR_DEV.ppk main.lua DJLEngine.dex libdjl64.so libonnxruntime.so bridge/lua/DJLBridge.lua licenses)
           unzip -l dist/Vocal_Remover_CSR_DEV.ppk
           cat > dist/BUILD_INFO.txt <<'EOF'
           Product: CSR/Jieshuo Vocal Remover native bridge
@@ -95,6 +109,7 @@ jobs:
           Android minimum API: 29
           NDK: 27.2.12479018
           JNI class: DJLEngine
+          ONNX Runtime Android: 1.32.0 (MIT, ARM64)
           Model: disabled pending clarification of HTDemucs 6-stem weight rights
           Package status: development prototype, not a functional release
           EOF
