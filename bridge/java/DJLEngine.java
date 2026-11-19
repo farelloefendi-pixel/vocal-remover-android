@@ -3,6 +3,7 @@ import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.system.Os;
+import ai.onnxruntime.OrtEnvironment;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -37,6 +38,7 @@ public final class DJLEngine {
     private static final AtomicBoolean DOWNLOADING = new AtomicBoolean(false);
     private static final AtomicBoolean CANCEL_DOWNLOAD = new AtomicBoolean(false);
     private static volatile boolean libraryLoaded;
+    private static volatile OrtEnvironment ortEnvironment;
     private static volatile String modelPath;
     private static volatile String verifiedModelPath;
     private static volatile long verifiedModelLength = -1;
@@ -72,8 +74,9 @@ public final class DJLEngine {
                 return "GALAT|Folder mesin tidak ditemukan";
             }
             modelPath = new File(parent, "5c90dfd2.safetensors").getAbsolutePath();
+            ortEnvironment = OrtEnvironment.getEnvironment();
             String info = nativeComputeInfo(1, false);
-            return "OK|" + (info == null ? "Mesin C++ siap" : info);
+            return "OK|ONNX Runtime Android siap; " + (info == null ? "mesin native tersedia" : info);
         } catch (Throwable error) {
             return "GALAT|" + message(error);
         }
@@ -248,7 +251,8 @@ public final class DJLEngine {
 
     public static String infoMesin() {
         if (!libraryLoaded) return "Mesin native belum dimuat";
-        return "Mesin siap. Vulkan diperiksa saat pemisahan dimulai; komputasi CPU dibatasi maksimal tiga thread.";
+        if (ortEnvironment == null) return "ONNX Runtime belum siap";
+        return "ONNX Runtime Android berhasil dimuat. Mesin C++ lama masih prototipe; inferensi ONNX belum diaktifkan.";
     }
 
     /** Matches the three-String asynchronous entry point called by MD.mulai(). */
