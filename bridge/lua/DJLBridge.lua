@@ -85,11 +85,12 @@ local function sumberMesin()
     local dex = berkas(dir .. "DJLEngine.dex")
     local so = berkas(dir .. namaSo)
     local ort = berkas(dir .. "libonnxruntime.so")
-    if dex and so and ort then
-      return dex, so, ort, namaSo, calon
+    local ortJni = berkas(dir .. "libonnxruntime4j_jni.so")
+    if dex and so and ort and ortJni then
+      return dex, so, ort, ortJni, namaSo, calon
     end
   end
-  return nil, nil, nil, namaSo, calon
+  return nil, nil, nil, nil, namaSo, calon
 end
 
 function M.panggil(kls, nama, jumlah, argumen)
@@ -129,12 +130,12 @@ function M.siapkan()
     return kelas
   end
 
-  local dex, so, ort, namaSo, calon = sumberMesin()
+  local dex, so, ort, ortJni, namaSo, calon = sumberMesin()
   if not dex then
     local daftar = {}
     for _, path in ipairs(calon or {}) do daftar[#daftar + 1] = path end
     return nil, "Berkas mesin tidak lengkap. Letakkan DJLEngine.dex, "
-      .. namaSo .. ", dan libonnxruntime.so di folder ekstensi. Folder yang diperiksa: "
+      .. namaSo .. ", libonnxruntime.so, dan libonnxruntime4j_jni.so di folder ekstensi. Folder yang diperiksa: "
       .. table.concat(daftar, ", ")
   end
 
@@ -145,6 +146,7 @@ function M.siapkan()
   local ortFolder = folder .. "/ort_" .. stempel(ort)
   pcall(function() File(ortFolder).mkdirs() end)
   local ortTujuan = ortFolder .. "/libonnxruntime.so"
+  local ortJniTujuan = ortFolder .. "/libonnxruntime4j_jni.so"
 
   if not berkas(dexTujuan) and not salin(dex, dexTujuan) then
     return nil, "Gagal menyalin DJLEngine.dex ke cache internal"
@@ -154,6 +156,9 @@ function M.siapkan()
   end
   if not berkas(ortTujuan) and not salin(ort, ortTujuan) then
     return nil, "Gagal menyalin libonnxruntime.so ke cache internal"
+  end
+  if not berkas(ortJniTujuan) and not salin(ortJni, ortJniTujuan) then
+    return nil, "Gagal menyalin libonnxruntime4j_jni.so ke cache internal"
   end
 
   local ok, hasil = pcall(function()
@@ -166,7 +171,7 @@ function M.siapkan()
   end
 
   local okMuat, pesan = pcall(function()
-    return M.panggil(hasil, "muat", 1, { soTujuan })
+    return M.panggil(hasil, "muat", 2, { soTujuan, ortFolder })
   end)
   if not okMuat then return nil, "Gagal memuat mesin C++: " .. tostring(pesan) end
   if string.sub(pesan, 1, 2) ~= "OK" then
