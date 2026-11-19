@@ -6,7 +6,6 @@ on:
     paths:
       - "bridge/**"
       - ".github/workflows/build-engine.yml"
-      - "docs/MESIN_DEMUCS.md"
 
 jobs:
   build-arm64:
