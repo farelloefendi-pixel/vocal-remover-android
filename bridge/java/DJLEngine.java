@@ -113,6 +113,8 @@ public final class DJLEngine {
         }
 
         CANCEL_DOWNLOAD.set(false);
+        writeStatus(new File(statusPath), "jalan", 0,
+                "Menghubungkan", "Menghubungkan ke server model");
         File target = new File(modelPath);
         File temporary = new File(modelPath + ".download");
         HttpURLConnection connection = null;
