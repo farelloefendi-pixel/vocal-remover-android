@@ -1,2 +1,45 @@
-# vocal-remover-android
-Offline Android music source separation project
+# Vocal Remover CSR
+
+Proyek ekstensi **Commentary Screen Reader (CSR) / Jieshuo** untuk memisahkan audio musik secara offline di Android.
+
+> **Status: tahap perancangan dan pemeriksaan integrasi.** Belum ada ekstensi siap pakai atau binary mesin pemisah yang dapat dipasang.
+
+## Sasaran
+
+- Bentuk produk akhir: ekstensi CSR/Jieshuo, bukan APK mandiri.
+- Antarmuka dan alur penggunaan: Lua.
+- Jembatan ke kode native: Java DEX + JNI, mengikuti pola referensi ekstensi yang diberikan.
+- Mesin pemisahan: C++ dengan model pemisahan musik enam stem yang akan divalidasi.
+- Keluaran yang dituju: vocals, drums, bass, other, guitar, dan piano.
+- Operasi offline, progres yang dapat dibaca pembaca layar, pembatalan, serta pembersihan berkas sementara.
+
+## Perangkat sasaran awal
+
+Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal harus konservatif: satu pekerjaan pemisahan pada satu waktu, pembatasan memori, dan pemrosesan bertahap.
+
+## Arsitektur yang dituju
+
+`main.lua` mengelola antarmuka CSR dan memanggil kelas Java dari DEX melalui `DexClassLoader`. Kelas Java memuat pustaka native ARM64 (`.so`) dan menjadi penghubung JNI ke mesin C++. Mesin memproses audio dan menghasilkan berkas stem.
+
+Pola pemuatan DEX, pemilihan pustaka berdasarkan arsitektur, pemisahan pekerjaan dari utas antarmuka, pemantauan status, dan permintaan pembatalan akan mengacu pada ekstensi referensi. Antarmuka mesin untuk Vocal Remover perlu dirancang ulang agar audio panjang tidak dikirim sebagai satu array PCM besar.
+
+## Dokumen proyek
+
+- [Pemeriksaan pola ekstensi referensi](docs/REFERENSI_INTEGRASI.md)
+- [Arsitektur teknis](docs/ARSITEKTUR.md)
+- [Tahapan pengembangan dan pengujian](docs/ROADMAP.md)
+
+## Batasan yang sudah diketahui
+
+- Model enam stem tidak menyediakan stem rebab khusus. Hasil rebab, suling, gamelan, gender, saron, dan bonang harus diuji; tidak ada jaminan instrumen tradisional akan selalu dipertahankan sempurna.
+- Model dan binary native belum disertakan dalam repositori.
+- Tidak ada klaim bahwa mesin sudah dapat dikompilasi atau dijalankan pada perangkat sasaran.
+- APK mandiri bukan target proyek.
+
+## Prinsip pengembangan
+
+1. Ikuti pola integrasi yang benar-benar ditemukan pada ekstensi referensi.
+2. Jangan mengunci rancangan JNI sebelum antarmuka pemrosesan bertahap dan kebutuhan memori teruji.
+3. Jaga UI CSR tetap responsif dan fokus pembaca layar tetap stabil.
+4. Uji pada perangkat sasaran sebelum menyatakan fitur berhasil.
+5. Catat lisensi, asal model, checksum, dan instruksi distribusi sebelum menyertakan aset model.
