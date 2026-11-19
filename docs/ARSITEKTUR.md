@@ -2,146 +2,125 @@
 
 ## 1. Bentuk produk
 
-Produk akhir adalah ekstensi CSR/Jieshuo. Lua mengendalikan UI dan alur penggunaan. Java DEX menjadi jembatan pemuatan dan pemanggilan kode native. Mesin pemisah audio berjalan dalam pustaka C++ `.so`.
+Produk akhir adalah ekstensi CSR/Jieshuo dalam paket PPK. Tidak ada APK mandiri. Lua mengelola menu dan navigasi, Java DEX menghubungkan API Android dengan JNI, dan C++ menjalankan pemisahan audio.
 
-Tidak ada APK mandiri dalam sasaran proyek ini.
+## 2. Struktur paket PPK
 
-## 2. Lapisan sistem
+Paket yang dibuat CI berisi:
+- `main.lua`
+- `DJLEngine.dex`
+- `libdjl64.so` untuk ABI ARM64
+- `bridge/lua/DJLBridge.lua`
+
+Model tidak dibundel. Ekstensi mengunduh model pada pemakaian pertama dan menyimpan di cache privat.
+
+## 3. Lapisan sistem
 
 ```text
 CSR / Jieshuo
   main.lua
     - menu dan pemilih audio
-    - pengumuman progres yang ramah screen reader
-    - mulai / tinggalkan layar / batal / hasil
-    - pemulihan status tugas
+    - dialog progres dan pembatalan
+    - pemulihan tugas dan daftar hasil
+        |
+        v
+  bridge/lua/DJLBridge.lua
+    - mencari DEX dan SO
+    - DexClassLoader
+    - refleksi metode statis
+    - status tugas berbasis file
         |
         v
   DJLEngine.dex (Java)
-    - pemuatan pustaka native
-    - decode/akses audio melalui API Android bila diperlukan
-    - pengelolaan worker dan lifecycle native
-    - kontrak JNI
+    - System.load pustaka native
+    - unduh model streaming + checksum
+    - MediaExtractor / MediaCodec
+    - worker tunggal
+    - progres dan pembatalan
         |
         v
-  libvocalengine.so (C++ / ARM64)
-    - preprocessing audio
-    - inferensi model pemisahan
-    - pemrosesan segmen
-    - penulisan enam stem
-    - status dan pembatalan
-        |
-        v
-  Direktori hasil
-    vocals.wav
-    drums.wav
-    bass.wav
-    other.wav
-    guitar.wav
-    piano.wav
+  libdjl64.so (C++ / JNI)
+    - prepare stereo float32 44,1 kHz
+    - inferensi HTDemucs 6S
+    - Vulkan bila tersedia, CPU fallback
+    - enam WAV
 ```
 
-Nama kelas, nama metode, dan nama file di atas merupakan rancangan, bukan nama yang sudah tersedia pada binary.
+## 4. Kesesuaian dengan PPK referensi
 
-## 3. Kontrak Lua–Java–C++
+Pola Lua direplikasi dari `main.lua` PPK referensi:
+1. `DJL.base` digunakan untuk mencari file mesin di folder ekstensi.
+2. `DJLEngine.dex` dan pustaka SO dipilih berdasarkan ABI.
+3. File disalin ke direktori cache privat.
+4. Kelas dimuat dengan `DexClassLoader(dexPath, optimizedDir, null, ctx.getClassLoader())`.
+5. Kelas disimpan pada `System.getProperties()` agar tidak dibuat ulang setiap kali fungsi dipanggil.
+6. Metode Java statis dipanggil menggunakan `getDeclaredMethod` dan `invoke`.
+7. Worker menulis status ke file; Lua membaca status melalui Handler.
+8. ID pekerjaan disimpan agar ekstensi dapat melanjutkan pemantauan setelah dibuka kembali.
 
-Pola referensi menggunakan `DexClassLoader`, pemuatan SO, pemanggilan reflektif metode Java, status berbasis file, dan file pembatalan. Prinsip ini dipertahankan.
+Kontrak inti yang sama:
+- `muat(String soPath)`
+- `mulai(String audioPath, String workDir, String jobId)`
+- `batal(String workDir, String jobId)`
+- `hidup(String jobId)`
 
-API logis yang dibutuhkan:
-- `prepare(enginePath, modelPath, workDir)` — validasi dan inisialisasi mesin.
-- `start(inputPath, outputDir, jobId, options)` — mulai tugas tanpa menahan UI.
-- `getStatus(jobId)` — membaca tahap, persentase, dan pesan.
-- `cancel(jobId)` — meminta pembatalan kooperatif.
-- `isAlive(jobId)` — memeriksa apakah worker masih aktif.
-- `release()` — melepas model dan sumber daya native setelah tugas benar-benar berhenti.
+Metode tambahan mengelola lokasi model, verifikasi, unduhan, dan informasi mesin.
 
-Nama dan tipe parameter final akan disesuaikan dengan pola kelas Java referensi setelah bytecode Java diperiksa lebih lanjut.
+## 5. Model dan input audio
 
-## 4. Audio dan memori
+- Model: Demucs v4.1.0 HTDemucs 6-stem.
+- File: `5c90dfd2.safetensors`.
+- SHA-256: `d2a1745f0744721f6b8ca5bf469b67c651ea5ed1b52998cab033b2158609d411`.
+- Model diunduh secara streaming ke file sementara, diverifikasi, lalu dipindahkan ke lokasi final.
+- Verifikasi checksum dicache berdasarkan path, ukuran, dan waktu modifikasi file.
+- MediaCodec mendekode input ke PCM float32 interleaved secara bertahap.
+- Mesin menyiapkan input menjadi stereo float32 44,1 kHz.
 
-Jangan menampung seluruh audio, semua tensor, dan keenam hasil di RAM sekaligus.
+## 6. Batas memori dan komputasi
 
-Rancangan awal:
-- Baca/decode audio secara bertahap.
-- Resample dan ubah format dalam buffer terbatas.
-- Proses satu segmen pada satu waktu pada perangkat RAM 6 GB.
-- Tulis keluaran setiap segmen secara bertahap ke enam file sementara.
-- Finalisasi WAV hanya setelah semua segmen berhasil.
-- Jika dibatalkan/gagal, tutup file dan hapus hasil parsial sesuai kebijakan pemulihan.
+- Satu pemisahan aktif.
+- Satu segmen inferensi dalam satu waktu.
+- Maksimal tiga thread komputasi CPU untuk mengurangi perebutan sumber daya dengan UI dan pembaca layar.
+- Mesin mencoba Vulkan dan beralih ke CPU jika Vulkan tidak tersedia atau self-test gagal.
+- Audio mentah dan audio hasil prepare disimpan di file, bukan ditampung sebagai satu array besar.
+- File raw dan prepared dihapus setelah selesai, gagal, atau dibatalkan.
+- Hasil WAV disimpan terpisah agar dapat diputar kembali.
 
-Ukuran segmen dan overlap belum ditetapkan; harus mengikuti kebutuhan model dan hasil pengujian pada Redmi 13C. Jangan menganggap angka dari perangkat lain berlaku langsung.
+Angka ini adalah konfigurasi awal konservatif untuk perangkat RAM 6 GB; penggunaan RAM, waktu, dan suhu harus diukur langsung.
 
-## 5. Status tugas
+## 7. Status dan lifecycle
 
-Status minimal: `queued`, `decoding`, `separating`, `writing`, `completed`, `cancelled`, `failed`.
+Status file memakai format:
+`state|percent|stage|message|timestamp`
 
-Informasi yang disimpan:
-- ID tugas.
-- Tahap dan persentase.
-- Pesan kesalahan singkat.
-- Waktu pembaruan.
-- Lokasi input dan output.
-- Versi mesin/model.
+State:
+- `jalan`
+- `selesai`
+- `galat`
+- `batal`
 
-Status harus ditulis secara atomik (file sementara lalu rename) sebagaimana pola yang tampak pada referensi. UI hanya membaca status dan mengumumkan perubahan bermakna, bukan membacakan setiap pembaruan kecil.
+Lua membaca status setiap 400–500 ms dan hanya memperbarui pesan ketika teks berubah. Jika ekstensi dibuka kembali saat worker masih hidup, pemantauan dilanjutkan. Jika proses sudah mati dan tugas belum selesai, file sementara dan hasil parsial dibersihkan.
 
-## 6. Aksesibilitas
+Pembatalan dilakukan dengan marker file dan permintaan cancel native. Pembatalan bersifat kooperatif: worker berhenti ketika mencapai pemeriksaan atau callback progres berikutnya.
 
-- Gunakan kontrol native yang labelnya terbaca.
-- Setiap tombol memiliki nama aksi yang jelas.
-- Urutan fokus konsisten.
-- Jangan memindahkan fokus otomatis pada setiap pembaruan progres.
-- Progres diumumkan saat tahap berubah atau persentase melewati interval yang wajar.
-- Tombol batal dapat dijangkau tanpa harus menelusuri teks panjang.
-- Setelah dialog progres ditutup atau layar ditinggalkan, fokus saat kembali harus dipulihkan secara terukur.
-- Uji dengan Jieshuo/CSR pada perangkat sasaran; aksesibilitas tidak boleh dinyatakan berhasil hanya dari inspeksi kode.
+## 8. Hasil dan aksesibilitas
 
-## 7. Model dan keluaran
+Enam keluaran:
+1. `vocals.wav`
+2. `drums.wav`
+3. `bass.wav`
+4. `other.wav`
+5. `guitar.wav`
+6. `piano.wav`
 
-Target enam stem:
-1. vocals
-2. drums
-3. bass
-4. other
-5. guitar
-6. piano
+Antarmuka memakai kontrol native `LuaDialog`, `ListView`, dan `Button`, mengikuti gaya referensi. Pengguna dapat memutar stem atau menyalin path file. Hasil saat ini berada pada direktori privat CSR/Jieshuo; ekspor ke folder Musik bersama belum disediakan.
 
-Model enam stem bukan pemisah instrumen tradisional khusus. Rebab, suling, gender, saron, bonang, dan instrumen lain dapat masuk ke kategori stem yang berbeda atau mengalami kebocoran. Evaluasi khusus musik Jawa harus menjadi bagian pengujian, bukan janji kualitas.
+Label dan urutan kontrol sudah disusun untuk pembaca layar, tetapi fokus Jieshuo/CSR harus diuji langsung di perangkat. Kode tidak dapat membuktikan bahwa fokus tidak meloncat.
 
-## 8. Keamanan dan distribusi
+## 9. Batas model musik
 
-- Jangan menyimpan API key karena target pemrosesan offline.
-- Jangan mengunduh atau memuat binary/model dari sumber yang belum diverifikasi.
-- Catat lisensi kode, model, dan dependensi secara terpisah.
-- Catat checksum model dan binary sebelum distribusi.
-- Model tidak dimasukkan ke Git biasa jika ukuran atau ketentuan lisensinya tidak sesuai.
+HTDemucs 6S bukan model pemisah instrumen tradisional. Rebab, suling, gender, saron, bonang, dan instrumen lain bisa masuk ke stem vocals, other, atau kategori lain. Pengujian sampel musik Jawa diperlukan sebelum membuat klaim kualitas.
 
+## 10. Status validasi
 
-## 9. Kontrak DEX yang mengikuti PPK referensi
-
-Kelas Java di dalam DEX harus tetap bernama `DJLEngine` dan menyediakan metode statis yang dipanggil Lua melalui refleksi:
-- `muat(String soPath): String`
-- `mulai(String audioPath, String workDir, String jobId): String`
-- `batal(String workDir, String jobId): String`
-- `hidup(String jobId): String`
-
-Metode `muat` memuat SO menggunakan path absolut. Untuk binding JNI Demucs, kelas yang sama juga mendeklarasikan native method upstream dan interface `DJLEngine$ProgressListener`. Build CMake harus mengatur `SDENGINE_JNI_CLASS=DJLEngine`.
-
-Metode `mulai` memulai satu worker Java asinkron. Worker mendekode audio, menjalankan prepare dan separation native, lalu memperbarui `status_<jobId>.txt`. Lua tetap menjadi pemantau dan pengendali UI.
-
-## 10. Lokasi model
-
-Bridge mencari bobot `5c90dfd2.safetensors` di folder privat yang sama dengan pustaka SO. Loader Lua perlu menyalin bobot ke folder tersebut menggunakan salinan streaming berbasis buffer, bukan membaca seluruh file ke satu string. Checksum wajib diverifikasi sebelum model digunakan.
-
-## 11. Format hasil untuk ekstensi
-
-Worker menghasilkan:
-- `stem_<jobId>/drums.wav`
-- `stem_<jobId>/bass.wav`
-- `stem_<jobId>/other.wav`
-- `stem_<jobId>/vocals.wav`
-- `stem_<jobId>/guitar.wav`
-- `stem_<jobId>/piano.wav`
-- `hasil_<jobId>.json` berisi lokasi keluaran.
-
-Parser Lua hasil tempo/chord pada referensi tidak digunakan untuk hasil Vocal Remover; format JSON hasil harus ditangani secara khusus.
+Build CI mengompilasi C++ JNI, DEX, memeriksa signature JNI, memeriksa sintaks Lua, dan mengemas PPK. Build berhasil bukan bukti runtime. Pemuatan di CSR, decode audio nyata, pemisahan enam stem, pembatalan, Vulkan/CPU, penggunaan memori, ekspor, dan aksesibilitas masih menunggu pengujian pada Redmi 13C Android 16.
