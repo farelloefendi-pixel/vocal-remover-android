@@ -124,7 +124,7 @@ end
 function M.siapkan()
   if not ctx then return nil, "Context CSR belum diinisialisasi" end
   local properties = System.getProperties()
-  local tersimpan = properties.get("vocalremover.kelas.ort132")
+  local tersimpan = properties.get("vocalremover.kelas.ort132.v2")
   if tersimpan ~= nil then
     kelas = tersimpan
     return kelas
@@ -143,7 +143,7 @@ function M.siapkan()
   pcall(function() File(folder .. "/odex").mkdirs() end)
   local dexTujuan = folder .. "/DJLEngine_" .. stempel(dex) .. ".dex"
   local soTujuan = folder .. "/libdjl_" .. stempel(so) .. ".so"
-  local ortFolder = folder .. "/ort_" .. stempel(ort)
+  local ortFolder = folder .. "/ort_" .. stempel(ort .. ortJni)
   pcall(function() File(ortFolder).mkdirs() end)
   local ortTujuan = ortFolder .. "/libonnxruntime.so"
   local ortJniTujuan = ortFolder .. "/libonnxruntime4j_jni.so"
@@ -180,7 +180,7 @@ function M.siapkan()
   end
 
   kelas = hasil
-  properties.put("vocalremover.kelas.ort132", kelas)
+  properties.put("vocalremover.kelas.ort132.v2", kelas)
   return kelas, pesan
 end
 
