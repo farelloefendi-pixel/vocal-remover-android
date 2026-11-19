@@ -32,9 +32,11 @@ Pipeline yang harus diimplementasikan dan diuji:
 
 Kontrak segmen yang telah dicatat:
 - panjang segmen input 261.120 sampel;
-- trim 3.840 sampel di setiap tepi;
-- bagian tengah unik 253.440 sampel.
-Overlap dan normalisasi akhir wajib diverifikasi terhadap kode referensi yang cocok dengan Kim Vocal 2; jangan mengasumsikan parameter model lain.
+- trim STFT 3.840 sampel di setiap tepi saat iSTFT;
+- overlap antarsegmen 25% dari panjang segmen (65.280 sampel);
+- stride 195.840 sampel;
+- hasil antarsegmen digabung dengan Hann crossfade dan normalisasi envelope.
+Konfigurasi overlap 25% dipilih dari catatan konfigurasi Kim Vocal 2 di ekosistem UVR dan harus tetap diuji pada perangkat sasaran.
 
 FFT 7680 bukan pangkat dua. Implementasi awal memakai Bluestein FFT berbasis radix-2 di Java agar ukuran transformasi 7680 dapat diproses tanpa DFT kuadratik. Akurasi dan kinerja Android belum tervalidasi.
 
