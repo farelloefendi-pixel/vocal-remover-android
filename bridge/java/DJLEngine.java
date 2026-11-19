@@ -1,47 +1,40 @@
+import android.media.AudioFormat;
+import android.media.MediaCodec;
+import android.media.MediaExtractor;
+import android.media.MediaFormat;
 import android.system.Os;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.ShortBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Java bridge for the CSR Lua extension.
+ * Java bridge loaded by the CSR extension through DexClassLoader.
+ * Keep the class in the default package: the native build registers on DJLEngine.
  *
- * Compile this class into the DEX loaded by the extension. Build the native
- * library with SDENGINE_JNI=ON and SDENGINE_JNI_CLASS="DJLEngine".
- *
- * All long-running methods are synchronous by design: call run() from the
- * extension's dedicated HandlerThread, never from the UI thread.
+ * Lua calls muat(String), mulai(String,String,String), batal(String,String),
+ * and hidup(String). Long work runs on this class's own Java worker thread.
  */
 public final class DJLEngine {
     public interface ProgressListener {
         boolean onProgress(float fraction, String stage);
     }
 
+    private static final Map<String, Thread> WORKERS = new HashMap<>();
     private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
     private static volatile boolean libraryLoaded;
+    private static volatile String modelPath;
 
     private DJLEngine() {
-    }
-
-    /** Load the JNI library by absolute path from the extension's private directory. */
-    public static synchronized void loadNativeLibrary(String absolutePath) {
-        if (libraryLoaded) {
-            return;
-        }
-        if (absolutePath == null || absolutePath.length() == 0) {
-            throw new IllegalArgumentException("Path pustaka native kosong.");
-        }
-        System.load(absolutePath);
-        libraryLoaded = true;
-    }
-
-    private static void requireLibrary() {
-        if (!libraryLoaded) {
-            throw new IllegalStateException("Pustaka mesin belum dimuat.");
-        }
     }
 
     private static native String nativeLoadModel(String path);
@@ -55,178 +48,479 @@ public final class DJLEngine {
     private static native String nativeComputeInfo(int computeThreads, boolean gpu);
     private static native void nativeCancel();
 
-    private static void checkCancelled(String cancelPath) {
-        if (cancelPath != null && new File(cancelPath).exists()) {
-            throw new CancellationException("Proses dibatalkan.");
-        }
-    }
-
-    private static String clean(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.replace('|', '/').replace('\n', ' ').replace('\r', ' ');
-    }
-
-    /** Atomic status update using a temporary file and rename in the same directory. */
-    private static void writeStatus(String statusPath, String stage,
-                                    int percent, String message) {
-        if (statusPath == null || statusPath.length() == 0) {
-            return;
-        }
-        File target = new File(statusPath);
-        File parent = target.getParentFile();
-        if (parent != null && !parent.exists() && !parent.mkdirs()) {
-            return;
-        }
-        File temporary = new File(statusPath + ".tmp");
-        String data = clean(stage) + "|" + Math.max(0, Math.min(100, percent))
-                + "|" + clean(message) + "|" + System.currentTimeMillis();
-        try (FileOutputStream stream = new FileOutputStream(temporary, false)) {
-            stream.write(data.getBytes(StandardCharsets.UTF_8));
-            stream.getFD().sync();
-        } catch (Exception ignored) {
-            return;
-        }
+    /** Matches the exact one-String method invoked by MD.siapkan() in the reference Lua. */
+    public static synchronized String muat(String soPath) {
         try {
-            Os.rename(temporary.getAbsolutePath(), target.getAbsolutePath());
-        } catch (Exception error) {
-            // Keep the previous complete status if atomic replacement fails.
-            // The temporary file is harmless and can be cleaned by Lua later.
-        }
-    }
-
-    /**
-     * Full separation pipeline. Call this method from a dedicated worker thread.
-     *
-     * rawPath must point to interleaved float32 PCM decoded by MediaCodec.
-     * The engine resamples it to 44.1 kHz stereo, then writes selected WAV stems.
-     * A single active job is allowed because the upstream engine has global
-     * cancellation state.
-     */
-    public static double[] run(
-            String modelPath,
-            String rawPath,
-            int sampleRate,
-            int channels,
-            String preparedPath,
-            String outputDirectory,
-            String statusPath,
-            String cancelPath,
-            int segmentThreads,
-            int computeThreads,
-            boolean gpu,
-            boolean[] selectedStems) {
-
-        requireLibrary();
-        if (!RUNNING.compareAndSet(false, true)) {
-            throw new IllegalStateException("Masih ada pekerjaan pemisahan yang berjalan.");
-        }
-
-        try {
-            if (cancelPath != null) {
-                File cancel = new File(cancelPath);
-                if (cancel.exists()) {
-                    cancel.delete();
-                }
+            if (soPath == null || soPath.length() == 0) {
+                return "GALAT|Lokasi pustaka native kosong";
             }
+            if (!libraryLoaded) {
+                System.load(soPath);
+                libraryLoaded = true;
+            }
+            File so = new File(soPath);
+            File parent = so.getParentFile();
+            if (parent == null) {
+                return "GALAT|Folder mesin tidak ditemukan";
+            }
+            modelPath = new File(parent, "htdemucs_6s.safetensors").getAbsolutePath();
+            String info = nativeComputeInfo(1, false);
+            return "OK|" + (info == null ? "Mesin C++ siap" : info);
+        } catch (Throwable error) {
+            return "GALAT|" + message(error);
+        }
+    }
 
-            writeStatus(statusPath, "loading_model", 0, "Memuat model pemisah audio");
+    /** Matches the three-String asynchronous entry point called by MD.mulai(). */
+    public static String mulai(final String audioPath, final String workDir, final String id) {
+        if (!libraryLoaded) {
+            return "GALAT|Mesin native belum dimuat";
+        }
+        if (audioPath == null || workDir == null || id == null
+                || audioPath.length() == 0 || workDir.length() == 0 || id.length() == 0) {
+            return "GALAT|Parameter pekerjaan tidak lengkap";
+        }
+        if (modelPath == null || !new File(modelPath).isFile()) {
+            return "GALAT|Model htdemucs_6s.safetensors belum ditemukan di folder mesin";
+        }
+        if (!RUNNING.compareAndSet(false, true)) {
+            return "GALAT|Pekerjaan pemisahan lain masih berjalan";
+        }
+
+        final Thread worker = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                kerjakan(audioPath, workDir, id);
+            }
+        }, "VocalRemover-" + id);
+
+        synchronized (WORKERS) {
+            WORKERS.put(id, worker);
+        }
+        try {
+            worker.start();
+            return "OK";
+        } catch (Throwable error) {
+            RUNNING.set(false);
+            synchronized (WORKERS) {
+                WORKERS.remove(id);
+            }
+            return "GALAT|" + message(error);
+        }
+    }
+
+    /** Matches the two-String cancellation method called by MD.batal(). */
+    public static String batal(String workDir, String id) {
+        try {
+            File cancel = new File(workDir, "batal_" + id + ".flag");
+            File parent = cancel.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+            try (FileOutputStream stream = new FileOutputStream(cancel, false)) {
+                stream.write("cancel".getBytes(StandardCharsets.UTF_8));
+            }
+            if (libraryLoaded) {
+                nativeCancel();
+            }
+            return "OK";
+        } catch (Throwable error) {
+            return "GALAT|" + message(error);
+        }
+    }
+
+    /** Matches the one-String liveness check called by MD.hidup(). */
+    public static String hidup(String id) {
+        synchronized (WORKERS) {
+            Thread worker = WORKERS.get(id);
+            return worker != null && worker.isAlive() ? "1" : "0";
+        }
+    }
+
+    private static void kerjakan(String audioPath, String workDir, String id) {
+        File root = new File(workDir);
+        File status = new File(root, "status_" + id + ".txt");
+        File cancel = new File(root, "batal_" + id + ".flag");
+        File raw = new File(root, "audio_" + id + ".f32");
+        File prepared = new File(root, "siap_" + id + ".f32");
+        File output = new File(root, "stem_" + id);
+
+        try {
+            if (!root.exists() && !root.mkdirs()) {
+                throw new IOException("Folder kerja tidak bisa dibuat");
+            }
+            cancel.delete();
+            writeStatus(status, "jalan", 0, "Membuka audio", "Menyiapkan pekerjaan");
+            checkCancelled(cancel);
+
             String modelError = nativeLoadModel(modelPath);
             if (modelError != null && modelError.length() > 0) {
                 throw new IllegalStateException(modelError);
             }
-            checkCancelled(cancelPath);
+            checkCancelled(cancel);
+
+            writeStatus(status, "jalan", 1, "Mendekode audio", "Membaca sumber audio");
+            AudioInfo info = decodeToFloat32(audioPath, raw, status, cancel);
+            checkCancelled(cancel);
 
             ProgressListener prepareProgress = new ProgressListener() {
                 @Override
                 public boolean onProgress(float fraction, String stage) {
-                    checkCancelled(cancelPath);
-                    int percent = 2 + Math.round(Math.max(0f, Math.min(1f, fraction)) * 18f);
-                    writeStatus(statusPath, "preparing", percent,
-                            stage == null ? "Menyiapkan audio" : stage);
+                    if (cancel.exists()) {
+                        return false;
+                    }
+                    int percent = 15 + Math.round(clamp(fraction) * 15f);
+                    writeStatus(status, "jalan", percent, "Menyiapkan audio", safeStage(stage));
                     return true;
                 }
             };
 
-            writeStatus(statusPath, "preparing", 2, "Menyiapkan audio untuk mesin");
+            writeStatus(status, "jalan", 15, "Menyiapkan audio", "Mengubah audio ke format mesin");
             String prepareError = nativePrepareInput(
-                    rawPath, sampleRate, channels, preparedPath, prepareProgress);
+                    raw.getAbsolutePath(), info.sampleRate, info.channels,
+                    prepared.getAbsolutePath(), prepareProgress);
             if (prepareError != null && prepareError.length() > 0) {
                 throw new IllegalStateException(prepareError);
             }
-            checkCancelled(cancelPath);
+            checkCancelled(cancel);
 
-            boolean[] write = selectedStems;
-            if (write == null || write.length != 6) {
-                write = new boolean[] { true, true, true, true, true, true };
+            if (!output.exists() && !output.mkdirs()) {
+                throw new IOException("Folder hasil tidak bisa dibuat");
             }
 
             ProgressListener separationProgress = new ProgressListener() {
                 @Override
                 public boolean onProgress(float fraction, String stage) {
-                    checkCancelled(cancelPath);
-                    int percent = 20 + Math.round(
-                            Math.max(0f, Math.min(1f, fraction)) * 80f);
-                    writeStatus(statusPath, "separating", percent,
-                            stage == null ? "Memisahkan sumber audio" : stage);
+                    if (cancel.exists()) {
+                        return false;
+                    }
+                    int percent = 30 + Math.round(clamp(fraction) * 70f);
+                    writeStatus(status, "jalan", percent, "Memisahkan audio", safeStage(stage));
                     return true;
                 }
             };
 
-            writeStatus(statusPath, "separating", 20, "Memulai pemisahan enam stem");
-            double[] rms = nativeSeparate(
-                    preparedPath, outputDirectory, write, Math.max(1, segmentThreads),
-                    Math.max(0, computeThreads), gpu, separationProgress);
+            writeStatus(status, "jalan", 30, "Memisahkan audio", "Mesin Demucs sedang bekerja");
+            boolean[] write = new boolean[] { true, true, true, true, true, true };
+            int computeThreads = Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
+            nativeSeparate(prepared.getAbsolutePath(), output.getAbsolutePath(),
+                    write, 1, computeThreads, false, separationProgress);
+            checkCancelled(cancel);
 
-            writeStatus(statusPath, "completed", 100, "Pemisahan audio selesai");
-            return rms;
+            writeResult(new File(root, "hasil_" + id + ".json"), output);
+            writeStatus(status, "selesai", 100, "Selesai", "Enam stem audio berhasil dibuat");
         } catch (CancellationException cancelled) {
-            writeStatus(statusPath, "cancelled", 0, "Pekerjaan dibatalkan");
-            throw cancelled;
+            writeStatus(status, "batal", 0, "Dibatalkan", "Pekerjaan dihentikan atas permintaan pengguna");
+            deleteTree(output);
+            new File(root, "hasil_" + id + ".json").delete();
         } catch (Throwable error) {
-            writeStatus(statusPath, "failed", 0,
-                    error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage());
-            if (error instanceof RuntimeException) {
-                throw (RuntimeException) error;
-            }
-            if (error instanceof Error) {
-                throw (Error) error;
-            }
-            throw new RuntimeException(error);
+            writeStatus(status, "galat", 0, "Gagal", message(error));
+            deleteTree(output);
+            new File(root, "hasil_" + id + ".json").delete();
         } finally {
+            raw.delete();
+            prepared.delete();
+            cancel.delete();
             RUNNING.set(false);
         }
     }
 
-    /** Request cooperative cancellation of the active native operation. */
-    public static void cancel(String cancelPath) {
-        if (cancelPath != null && cancelPath.length() > 0) {
-            try (FileOutputStream stream = new FileOutputStream(cancelPath, false)) {
-                stream.write("cancel".getBytes(StandardCharsets.UTF_8));
-                stream.getFD().sync();
-            } catch (Exception ignored) {
-            }
-        }
-        if (libraryLoaded) {
-            try {
-                nativeCancel();
-            } catch (Throwable ignored) {
-            }
+    private static final class AudioInfo {
+        final int sampleRate;
+        final int channels;
+
+        AudioInfo(int sampleRate, int channels) {
+            this.sampleRate = sampleRate;
+            this.channels = channels;
         }
     }
 
-    public static String computeInfo(int computeThreads, boolean gpu) {
-        requireLibrary();
-        return nativeComputeInfo(Math.max(0, computeThreads), gpu);
+    /** Decode compressed audio to interleaved little-endian float32 without retaining the song in RAM. */
+    private static AudioInfo decodeToFloat32(
+            String inputPath, File rawFile, File status, File cancel) throws Exception {
+
+        MediaExtractor extractor = new MediaExtractor();
+        MediaCodec codec = null;
+        BufferedOutputStream output = null;
+        boolean codecStarted = false;
+        int track = -1;
+        int sampleRate = 0;
+        int channels = 0;
+        int pcmEncoding = AudioFormat.ENCODING_PCM_16BIT;
+        long durationUs = 0;
+        long lastStatus = 0;
+        long bytesWritten = 0;
+
+        try {
+            extractor.setDataSource(inputPath);
+            MediaFormat inputFormat = null;
+            for (int i = 0; i < extractor.getTrackCount(); i++) {
+                MediaFormat candidate = extractor.getTrackFormat(i);
+                String mime = candidate.getString(MediaFormat.KEY_MIME);
+                if (mime != null && mime.startsWith("audio/")) {
+                    track = i;
+                    inputFormat = candidate;
+                    break;
+                }
+            }
+            if (track < 0 || inputFormat == null) {
+                throw new IOException("Tidak ditemukan jalur audio pada berkas");
+            }
+
+            sampleRate = inputFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
+            channels = inputFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT);
+            if (inputFormat.containsKey(MediaFormat.KEY_DURATION)) {
+                durationUs = inputFormat.getLong(MediaFormat.KEY_DURATION);
+            }
+
+            extractor.selectTrack(track);
+            String mime = inputFormat.getString(MediaFormat.KEY_MIME);
+            codec = MediaCodec.createDecoderByType(mime);
+            codec.configure(inputFormat, null, null, 0);
+            codec.start();
+            codecStarted = true;
+            output = new BufferedOutputStream(new FileOutputStream(rawFile, false), 1024 * 1024);
+
+            MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
+            boolean inputDone = false;
+            boolean outputDone = false;
+            boolean outputFormatKnown = false;
+
+            while (!outputDone) {
+                checkCancelled(cancel);
+
+                if (!inputDone) {
+                    int inputIndex = codec.dequeueInputBuffer(10000);
+                    if (inputIndex >= 0) {
+                        ByteBuffer inputBuffer = codec.getInputBuffer(inputIndex);
+                        if (inputBuffer == null) {
+                            throw new IOException("Buffer input decoder tidak tersedia");
+                        }
+                        inputBuffer.clear();
+                        int size = extractor.readSampleData(inputBuffer, 0);
+                        if (size < 0) {
+                            codec.queueInputBuffer(inputIndex, 0, 0, 0,
+                                    MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                            inputDone = true;
+                        } else {
+                            codec.queueInputBuffer(inputIndex, 0, size,
+                                    extractor.getSampleTime(), 0);
+                            extractor.advance();
+                        }
+                    }
+                }
+
+                int outputIndex = codec.dequeueOutputBuffer(bufferInfo, 10000);
+                if (outputIndex >= 0) {
+                    if (bufferInfo.size > 0
+                            && (bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
+                        ByteBuffer decoded = codec.getOutputBuffer(outputIndex);
+                        if (decoded == null) {
+                            throw new IOException("Buffer output decoder tidak tersedia");
+                        }
+                        if (!outputFormatKnown) {
+                            MediaFormat outputFormat = codec.getOutputFormat();
+                            sampleRate = outputFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
+                            channels = outputFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT);
+                            if (outputFormat.containsKey(MediaFormat.KEY_PCM_ENCODING)) {
+                                pcmEncoding = outputFormat.getInteger(MediaFormat.KEY_PCM_ENCODING);
+                            }
+                            outputFormatKnown = true;
+                        }
+                        bytesWritten += writeFloatPcm(decoded, bufferInfo, pcmEncoding, output);
+                        long now = System.currentTimeMillis();
+                        if (now - lastStatus >= 400) {
+                            int percent = durationUs > 0
+                                    ? 1 + (int) Math.min(13, (bufferInfo.presentationTimeUs * 14L) / durationUs)
+                                    : 5;
+                            writeStatus(status, "jalan", percent, "Mendekode audio",
+                                    "Audio sedang dibaca dan dikonversi");
+                            lastStatus = now;
+                        }
+                    }
+                    if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                        outputDone = true;
+                    }
+                    codec.releaseOutputBuffer(outputIndex, false);
+                } else if (outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                    MediaFormat outputFormat = codec.getOutputFormat();
+                    int newRate = outputFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
+                    int newChannels = outputFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT);
+                    int newEncoding = outputFormat.containsKey(MediaFormat.KEY_PCM_ENCODING)
+                            ? outputFormat.getInteger(MediaFormat.KEY_PCM_ENCODING)
+                            : AudioFormat.ENCODING_PCM_16BIT;
+                    if (bytesWritten > 0 && (newRate != sampleRate
+                            || newChannels != channels || newEncoding != pcmEncoding)) {
+                        throw new IOException("Format PCM decoder berubah di tengah audio");
+                    }
+                    sampleRate = newRate;
+                    channels = newChannels;
+                    pcmEncoding = newEncoding;
+                    outputFormatKnown = true;
+                }
+            }
+
+            output.flush();
+            if (bytesWritten == 0) {
+                throw new IOException("Audio kosong atau tidak dapat didekode");
+            }
+            return new AudioInfo(sampleRate, channels);
+        } finally {
+            if (output != null) {
+                try { output.close(); } catch (Exception ignored) { }
+            }
+            if (codec != null) {
+                if (codecStarted) {
+                    try { codec.stop(); } catch (Exception ignored) { }
+                }
+                try { codec.release(); } catch (Exception ignored) { }
+            }
+            try { extractor.release(); } catch (Exception ignored) { }
+        }
     }
 
-    public static double[] analyze(String preparedPath) {
-        requireLibrary();
-        return nativeAnalyze(preparedPath);
+    private static long writeFloatPcm(
+            ByteBuffer source, MediaCodec.BufferInfo info, int encoding,
+            BufferedOutputStream output) throws IOException {
+
+        ByteBuffer data = source.duplicate().order(ByteOrder.LITTLE_ENDIAN);
+        data.position(info.offset);
+        data.limit(info.offset + info.size);
+
+        if (encoding == AudioFormat.ENCODING_PCM_FLOAT) {
+            if ((info.size & 3) != 0) {
+                throw new IOException("Ukuran PCM float tidak valid");
+            }
+            byte[] bytes = new byte[info.size];
+            data.get(bytes);
+            output.write(bytes);
+            return bytes.length;
+        }
+
+        if (encoding == AudioFormat.ENCODING_PCM_16BIT) {
+            ShortBuffer samples = data.slice().order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
+            ByteBuffer converted = ByteBuffer.allocate(samples.remaining() * 4)
+                    .order(ByteOrder.LITTLE_ENDIAN);
+            while (samples.hasRemaining()) {
+                converted.putFloat(samples.get() / 32768.0f);
+            }
+            output.write(converted.array(), 0, converted.position());
+            return converted.position();
+        }
+
+        if (encoding == AudioFormat.ENCODING_PCM_8BIT) {
+            ByteBuffer converted = ByteBuffer.allocate(data.remaining() * 4)
+                    .order(ByteOrder.LITTLE_ENDIAN);
+            while (data.hasRemaining()) {
+                converted.putFloat(((data.get() & 0xff) - 128) / 128.0f);
+            }
+            output.write(converted.array(), 0, converted.position());
+            return converted.position();
+        }
+
+        if (encoding == AudioFormat.ENCODING_PCM_24BIT_PACKED) {
+            if (data.remaining() % 3 != 0) {
+                throw new IOException("Ukuran PCM 24-bit tidak valid");
+            }
+            ByteBuffer converted = ByteBuffer.allocate((data.remaining() / 3) * 4)
+                    .order(ByteOrder.LITTLE_ENDIAN);
+            while (data.remaining() >= 3) {
+                int value = (data.get() & 0xff)
+                        | ((data.get() & 0xff) << 8)
+                        | (data.get() << 16);
+                converted.putFloat(value / 8388608.0f);
+            }
+            output.write(converted.array(), 0, converted.position());
+            return converted.position();
+        }
+
+        if (encoding == AudioFormat.ENCODING_PCM_32BIT) {
+            if ((data.remaining() & 3) != 0) {
+                throw new IOException("Ukuran PCM 32-bit tidak valid");
+            }
+            ByteBuffer converted = ByteBuffer.allocate(data.remaining())
+                    .order(ByteOrder.LITTLE_ENDIAN);
+            while (data.remaining() >= 4) {
+                converted.putFloat(data.getInt() / 2147483648.0f);
+            }
+            output.write(converted.array(), 0, converted.position());
+            return converted.position();
+        }
+
+        throw new IOException("Format PCM decoder belum didukung: " + encoding);
     }
 
-    public static boolean isRunning() {
-        return RUNNING.get();
+    private static void writeStatus(File target, String state, int percent,
+                                    String stage, String message) {
+        try {
+            File parent = target.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+            File temporary = new File(target.getAbsolutePath() + ".tmp");
+            String line = clean(state) + "|" + Math.max(0, Math.min(100, percent))
+                    + "|" + clean(stage) + "|" + clean(message) + "|"
+                    + System.currentTimeMillis();
+            try (FileOutputStream stream = new FileOutputStream(temporary, false)) {
+                stream.write(line.getBytes(StandardCharsets.UTF_8));
+            }
+            Os.rename(temporary.getAbsolutePath(), target.getAbsolutePath());
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static void writeResult(File file, File outputDirectory) throws IOException {
+        String[] names = { "drums", "bass", "other", "vocals", "guitar", "piano" };
+        StringBuilder json = new StringBuilder("{\"v\":1,\"outputs\":{");
+        for (int i = 0; i < names.length; i++) {
+            if (i > 0) json.append(',');
+            File stem = new File(outputDirectory, names[i] + ".wav");
+            json.append('\"').append(names[i]).append("\":\"")
+                    .append(jsonEscape(stem.getAbsolutePath())).append('\"');
+        }
+        json.append("}}");
+        try (FileOutputStream stream = new FileOutputStream(file, false)) {
+            stream.write(json.toString().getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    private static String jsonEscape(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static String clean(String value) {
+        if (value == null) return "";
+        return value.replace('|', '/').replace('\n', ' ').replace('\r', ' ');
+    }
+
+    private static String safeStage(String value) {
+        return value == null || value.length() == 0 ? "Memproses audio" : clean(value);
+    }
+
+    private static float clamp(float value) {
+        return Math.max(0f, Math.min(1f, value));
+    }
+
+    private static String message(Throwable error) {
+        String value = error.getMessage();
+        return clean(value == null || value.length() == 0
+                ? error.getClass().getSimpleName() : value);
+    }
+
+    private static void checkCancelled(File cancel) {
+        if (cancel.exists()) {
+            throw new CancellationException("Pekerjaan dibatalkan");
+        }
+    }
+
+    private static void deleteTree(File file) {
+        if (file == null || !file.exists()) return;
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) deleteTree(child);
+            }
+        }
+        file.delete();
     }
 }
