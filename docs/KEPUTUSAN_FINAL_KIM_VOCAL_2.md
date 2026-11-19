@@ -69,3 +69,33 @@ Paket belum boleh disebut siap atau diberikan sebagai hasil final sebelum:
 - lisensi kode, ONNX Runtime, model, serta izin tertulis tetap disertakan/didokumentasikan.
 
 Build Demucs/HTDemucs enam stem yang ada di riwayat CI adalah artefak pengembangan lama dan bukan paket yang dapat digunakan untuk keputusan ini. Jangan membagikannya sebagai build Kim Vocal 2.
+
+
+## Metadata tensor Kim Vocal 2 yang sudah dipastikan
+
+Kontrak tensor model Kim Vocal 2 (berdasarkan metadata MDX/UVR dan dokumentasi implementasi yang diuji terhadap ONNX asli):
+
+- Nama input: `input`.
+- Bentuk input: `[1, 4, 3072, 256]`, float32.
+- Urutan kanal: `[real_L, imag_L, real_R, imag_R]`.
+- Nama output: `output`.
+- Bentuk output: `[1, 4, 3072, 256]`, float32.
+- Satu segmen: `1024 * (256 - 1) = 261120` sampel per kanal (sekitar 5,92 detik).
+- Jendela: Hann periodik; STFT berpusat dengan padding refleksi setengah ukuran FFT.
+- Bin frekuensi 0 sampai 2 dinolkan sebelum inferensi; hasil spektrum dipulihkan ke ukuran penuh sebelum inverse STFT.
+- Proses panjang harus memakai overlap-add dengan bobot jendela dan trimming yang konsisten. Implementasi tidak boleh memakai chunking waveform HTDemucs lama.
+
+Nama node dan bentuk di atas tetap harus dibaca dari sesi ONNX saat runtime, lalu dibandingkan dengan kontrak ini. Pemeriksaan metadata bukan pengganti uji inferensi nyata.
+
+## Temuan audit kode lama (19 November 2026)
+
+Audit sumber menemukan implementasi Java yang masih:
+- mencari node `mix` dan `stems`;
+- mengharapkan tensor waveform `[1,2,343980]` dan keluaran enam stem `[1,6,2,343980]`;
+- membuat tujuh WAV dan menjumlahkan lima stem untuk instrumental;
+- memverifikasi SHA-256 bobot HTDemucs lama;
+- mengatur nama model ke `htdemucs_6s_fp16weights.onnx`.
+
+Bridge Lua juga masih menonaktifkan model dengan alasan lisensi HTDemucs, sedangkan workflow CI masih mengambil dan membangun mesin Demucs. Seluruh bagian tersebut wajib diganti secara terkoordinasi. Mengganti file model atau checksum saja tidak menghasilkan implementasi Kim Vocal 2 yang benar.
+
+Karena itu, artefak CI lama tidak boleh dipakai untuk pengujian pengguna. Implementasi baru perlu memasukkan STFT/iSTFT MDX-Net dan inferensi ONNX dua-stem, kemudian menjalani uji build serta audio nyata sebelum paket PPK diterbitkan.
