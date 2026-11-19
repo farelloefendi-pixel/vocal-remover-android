@@ -20,6 +20,26 @@ public final class MDXNetDSPTest {
         MDXNetDSP.BluesteinFFT fft = new MDXNetDSP.BluesteinFFT(MDXNetDSP.N_FFT);
         MDXNetDSP.createInput(left, right, tensor, window, fft);
 
+        int frame = 37;
+        int bin = 83;
+        double expectedReal = 0d;
+        double expectedImag = 0d;
+        for (int n = 0; n < MDXNetDSP.N_FFT; n++) {
+            int sample = MDXNetDSP.reflectIndex(
+                    frame * MDXNetDSP.HOP + n - MDXNetDSP.TRIM, MDXNetDSP.CHUNK);
+            double value = left[sample] * window[n];
+            double angle = 2d * Math.PI * bin * n / MDXNetDSP.N_FFT;
+            expectedReal += value * Math.cos(angle);
+            expectedImag -= value * Math.sin(angle);
+        }
+        int realIndex = (bin * MDXNetDSP.DIM_T) + frame;
+        int imagIndex = (MDXNetDSP.DIM_F * MDXNetDSP.DIM_T)
+                + realIndex;
+        if (Math.abs(tensor.get(realIndex) - expectedReal) > 0.01d
+                || Math.abs(tensor.get(imagIndex) - expectedImag) > 0.01d) {
+            throw new AssertionError("STFT spectrum differs from direct DFT reference");
+        }
+
         float[] restoredLeft = new float[MDXNetDSP.CHUNK];
         float[] restoredRight = new float[MDXNetDSP.CHUNK];
         MDXNetDSP.synthesize(tensor, 0, restoredLeft, window, envelope, fft, null);
