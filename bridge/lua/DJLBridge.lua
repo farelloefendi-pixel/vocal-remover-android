@@ -206,7 +206,8 @@ function M.unduhModel()
         return M.panggil(kls, "unduhModel", 2, { MODEL_URL, statusUnduh })
       end)
       local hasilTeks = tostring(hasil or "")
-      if not ok or (string.sub(hasilTeks, 1, 2) ~= "OK"
+      local sedangDiunduh = string.find(hasilTeks, "Pengunduhan model lain masih berjalan", 1, true) ~= nil
+      if not ok or (not sedangDiunduh and string.sub(hasilTeks, 1, 2) ~= "OK"
           and string.sub(hasilTeks, 1, 5) ~= "BATAL") then
         local f = io.open(statusUnduh, "wb")
         if f then
