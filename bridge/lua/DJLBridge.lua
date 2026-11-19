@@ -142,7 +142,7 @@ function M.siapkan()
   pcall(function() File(folder .. "/odex").mkdirs() end)
   local dexTujuan = folder .. "/DJLEngine_" .. stempel(dex) .. ".dex"
   local soTujuan = folder .. "/libdjl_" .. stempel(so) .. ".so"
-  local ortTujuan = folder .. "/libonnxruntime_" .. stempel(ort) .. ".so"
+  local ortTujuan = folder .. "/libonnxruntime.so"
 
   if not berkas(dexTujuan) and not salin(dex, dexTujuan) then
     return nil, "Gagal menyalin DJLEngine.dex ke cache internal"
