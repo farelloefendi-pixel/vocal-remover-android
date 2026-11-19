@@ -61,6 +61,34 @@ public final class MDXNetDSPTest {
             throw new AssertionError("STFT/iSTFT round-trip failed: max="
                     + maxError + ", rms=" + rms);
         }
+        float[] blend = MDXNetDSP.createBlendWindow();
+        long[] lengths = new long[] {
+                44100L, 130559L, 130560L, 195840L, 391680L,
+                500000L, 1000000L, 44100L * 180L
+        };
+        for (long length : lengths) {
+            long padded = length + 2L * MDXNetDSP.BORDER + 1L;
+            long chunks = padded <= MDXNetDSP.CHUNK ? 1L
+                    : ((padded - MDXNetDSP.CHUNK + MDXNetDSP.STEP - 1L)
+                            / MDXNetDSP.STEP) + 1L;
+            for (long sample = 0; sample < length; sample++) {
+                long paddedSample = MDXNetDSP.BORDER + sample;
+                double weight = 0d;
+                for (long chunk = 0; chunk < chunks; chunk++) {
+                    long local = paddedSample - chunk * MDXNetDSP.STEP;
+                    if (local >= 0 && local < MDXNetDSP.CHUNK) {
+                        weight += blend[(int) local];
+                    }
+                }
+                if (!(weight > 1e-6d)) {
+                    throw new AssertionError("Overlap-add has an uncovered sample at length "
+                            + length + ", sample " + sample);
+                }
+            }
+        }
+        System.out.println("MDX overlap-add coverage OK; overlap="
+                + MDXNetDSP.OVERLAP + ", step=" + MDXNetDSP.STEP
+                + ", border=" + MDXNetDSP.BORDER);
         System.out.println("MDX DSP round-trip OK; maxError=" + maxError + ", rms=" + rms);
     }
 }
