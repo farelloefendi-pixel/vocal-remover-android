@@ -90,3 +90,10 @@ Jangan menyatakan ekstensi siap pakai sebelum mesin native, model, enam keluaran
 - [x] Nonaktifkan unduhan/pemakaian bobot HTDemucs dari adapter Lua.
 - [x] Ubah paket hasil CI menjadi PPK development, bukan rilis fungsional.
 - [ ] Pilih dan validasi model pengganti dengan lisensi bobot yang jelas.
+
+
+## Kompatibilitas Android 15/16
+
+- [x] Pastikan pustaka JNI menggunakan linker alignment 16 KB yang sudah disediakan CMake upstream.
+- [x] Tambahkan pemeriksaan program header ELF pada CI; build 19 November 2026 lulus pemeriksaan `0x4000`.
+- [ ] Verifikasi pemuatan pustaka pada perangkat sasaran dan perangkat 16 KB page-size nyata jika tersedia.
