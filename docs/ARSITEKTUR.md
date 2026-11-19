@@ -12,7 +12,7 @@ Paket yang dibuat CI berisi:
 - `libdjl64.so` untuk ABI ARM64
 - `bridge/lua/DJLBridge.lua`
 
-Model tidak dibundel. Ekstensi mengunduh model pada pemakaian pertama dan menyimpan di cache privat.
+Model HTDemucs tidak dibundel dan saat ini tidak diunduh atau digunakan. Integrasi model ditahan sampai hak penggunaan bobot jelas.
 
 ## 3. Lapisan sistem
 
@@ -71,8 +71,9 @@ Metode tambahan mengelola lokasi model, verifikasi, unduhan, dan informasi mesin
 - Model: Demucs v4.1.0 HTDemucs 6-stem.
 - File: `5c90dfd2.safetensors`.
 - SHA-256: `d2a1745f0744721f6b8ca5bf469b67c651ea5ed1b52998cab033b2158609d411`.
-- Model diunduh secara streaming ke file sementara, diverifikasi, lalu dipindahkan ke lokasi final.
-- Verifikasi checksum dicache berdasarkan path, ukuran, dan waktu modifikasi file.
+- Downloader streaming dan pemeriksa SHA-256 masih tersedia sebagai komponen generik, tetapi adapter Lua mematikan pemakaian HTDemucs.
+- Bobot HTDemucs 6-stem dinyatakan oleh pemelihara Demucs hanya untuk tujuan ilmiah; lihat `docs/LISENSI_MODEL.md`.
+- Alternatif berlisensi jelas sedang dinilai.
 - MediaCodec mendekode input ke PCM float32 interleaved secara bertahap.
 - Mesin menyiapkan input menjadi stereo float32 44,1 kHz.
 
@@ -113,7 +114,7 @@ Enam keluaran:
 5. `guitar.wav`
 6. `piano.wav`
 
-Antarmuka memakai kontrol native `LuaDialog`, `ListView`, dan `Button`, mengikuti gaya referensi. Pengguna dapat memutar stem atau menyalin path file. Hasil saat ini berada pada direktori privat CSR/Jieshuo; ekspor ke folder Musik bersama belum disediakan.
+Antarmuka memakai kontrol native `LuaDialog`, `ListView`, dan `Button`, mengikuti gaya referensi. Daftar hasil dan pemutar stem sudah disiapkan, tetapi pemisahan dinonaktifkan sementara. Hasil saat ini berada pada direktori privat CSR/Jieshuo; ekspor ke folder Musik bersama belum disediakan.
 
 Label dan urutan kontrol sudah disusun untuk pembaca layar, tetapi fokus Jieshuo/CSR harus diuji langsung di perangkat. Kode tidak dapat membuktikan bahwa fokus tidak meloncat.
 
@@ -123,4 +124,4 @@ HTDemucs 6S bukan model pemisah instrumen tradisional. Rebab, suling, gender, sa
 
 ## 10. Status validasi
 
-Build CI mengompilasi C++ JNI, DEX, memeriksa signature JNI, memeriksa sintaks Lua, dan mengemas PPK. Build berhasil bukan bukti runtime. Pemuatan di CSR, decode audio nyata, pemisahan enam stem, pembatalan, Vulkan/CPU, penggunaan memori, ekspor, dan aksesibilitas masih menunggu pengujian pada Redmi 13C Android 16.
+Build CI mengompilasi C++ JNI, DEX, memeriksa signature JNI, memeriksa sintaks Lua, dan mengemas PPK development. Build berhasil bukan bukti runtime atau izin penggunaan model. Pemuatan di CSR, decode audio nyata, pemisahan enam stem, pembatalan, Vulkan/CPU, penggunaan memori, ekspor, dan aksesibilitas masih menunggu pengujian pada Redmi 13C Android 16.
