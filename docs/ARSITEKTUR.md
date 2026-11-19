@@ -10,7 +10,7 @@ Paket yang dibuat CI berisi:
 - `main.lua`
 - `DJLEngine.dex`
 - `libdjl64.so` untuk ABI ARM64 (mesin Demucs prototipe)
-- `libonnxruntime.so` untuk ABI ARM64 (ONNX Runtime Android 1.32.0)
+- `libonnxruntime.so` dan `libonnxruntime4j_jni.so` untuk ABI ARM64 (ONNX Runtime Android 1.32.0)
 - `bridge/lua/DJLBridge.lua`
 
 Model HTDemucs tidak dibundel dan saat ini tidak diunduh atau digunakan. Integrasi model ditahan sampai hak penggunaan bobot jelas.
@@ -34,7 +34,8 @@ CSR / Jieshuo
         v
   DJLEngine.dex (Java + API ONNX Runtime)
     - System.load pustaka native C++ lama
-    - inisialisasi OrtEnvironment melalui DexClassLoader
+    - memuat kedua pustaka ONNX Runtime melalui properti jalur native eksplisit
+    - inisialisasi OrtEnvironment dan sesi model ONNX
     - unduh model streaming + checksum
     - MediaExtractor / MediaCodec
     - worker tunggal
@@ -166,8 +167,8 @@ Status: kontrak dan batas memori sudah didokumentasikan; runtime ONNX, inferensi
 
 Kandidat enam stem ONNX tidak kompatibel langsung dengan JNI Demucs yang sekarang. Runtime Android dan kelas Java ONNX sudah dipaketkan serta inisialisasinya disiapkan melalui bridge; pemuatan model, tensor input stereo 44,1 kHz, inferensi segmen sekitar 7,8 detik dengan overlap-add, dan penulisan enam keluaran WAV belum diimplementasikan.
 
-ONNX Runtime Android 1.32.0 kini ditambahkan sebagai dependensi AAR resmi Maven Central. Workflow mengambil versi yang dipatok, mengekstrak kelas Java dan pustaka ARM64, menggabungkan kelas API ONNX ke DEX, serta memasukkan libonnxruntime.so ke paket. DexClassLoader diberi jalur pencarian pustaka native privat sehingga API Java ONNX Runtime dapat menemukan libonnxruntime.so. DJLEngine memanggil OrtEnvironment.getEnvironment() saat bridge dimuat sebagai pemeriksaan inisialisasi runtime.
+ONNX Runtime Android 1.32.0 kini ditambahkan sebagai dependensi AAR resmi Maven Central. Workflow mengambil versi yang dipatok, mengekstrak kelas Java dan pustaka ARM64, menggabungkan kelas API ONNX ke DEX, serta memasukkan libonnxruntime.so ke paket. DexClassLoader diberi jalur pencarian pustaka native privat sehingga API Java ONNX Runtime dapat menemukan libonnxruntime.so. DJLEngine menetapkan jalur kedua pustaka native secara eksplisit sebelum memanggil OrtEnvironment.getEnvironment(). Metode ujiModelEnamStem membuka sesi ONNX, memastikan node mix/stems, menjalankan tensor nol berukuran [1,2,343980], lalu memeriksa 4.127.760 nilai output float agar finite. Ini adalah smoke test satu segmen, bukan pemisahan lagu nyata.
 
 Tahap ini baru mengintegrasikan dan menginisialisasi runtime, belum membuka model atau menjalankan inferensi. Mesin C++ lama masih dipertahankan sebagai prototipe dan bukan jalur inferensi ONNX. Model ONNX FP16-weights sekitar 136 MB tetap harus diverifikasi checksum dan hak distribusinya. Kebutuhan RAM serta kecepatan di Apple M4 Pro yang dilaporkan penerbit tidak dapat digeneralisasi ke Redmi 13C.
 
-CI memeriksa keberadaan kelas OrtEnvironment di DEX, memastikan libonnxruntime.so berarsitektur AArch64, dan memeriksa alignment halaman ELF 16 KB pada kedua pustaka native. Pemeriksaan tersebut hanya validasi paket/kompilasi; belum membuktikan runtime dapat dimuat di CSR pada perangkat. Sebelum jalur ONNX dinyatakan siap, build dan uji perangkat harus membuktikan pembukaan model, satu inferensi uji, pemrosesan file audio panjang secara bertahap, enam WAV yang valid, pembatalan tanpa file rusak, dan pembersihan file sementara. Pengujian perangkat nyata tetap wajib.
+CI memeriksa keberadaan kelas OrtEnvironment di DEX, memastikan kedua pustaka ONNX Runtime berarsitektur AArch64, dan memeriksa alignment halaman ELF 16 KB pada keduanya. Pemeriksaan tersebut hanya validasi paket/kompilasi; belum membuktikan runtime dapat dimuat di CSR pada perangkat. Sebelum jalur ONNX dinyatakan siap, build dan uji perangkat harus membuktikan pembukaan model, satu inferensi uji, pemrosesan file audio panjang secara bertahap, enam WAV yang valid, pembatalan tanpa file rusak, dan pembersihan file sementara. Pengujian perangkat nyata tetap wajib.
