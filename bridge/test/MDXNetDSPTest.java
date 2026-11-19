@@ -18,7 +18,8 @@ public final class MDXNetDSPTest {
         FloatBuffer tensor = ByteBuffer.allocateDirect(MDXNetDSP.TENSOR_SIZE * 4)
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
         MDXNetDSP.BluesteinFFT fft = new MDXNetDSP.BluesteinFFT(MDXNetDSP.N_FFT);
-        MDXNetDSP.createInput(left, right, tensor, window, fft);
+        MDXNetDSP.Workspace workspace = new MDXNetDSP.Workspace();
+        MDXNetDSP.createInput(left, right, tensor, window, fft, workspace);
         for (int plane = 0; plane < 4; plane++) {
             for (int bin = 0; bin < 3; bin++) {
                 for (int frameIndex = 0; frameIndex < MDXNetDSP.DIM_T; frameIndex++) {
@@ -53,8 +54,8 @@ public final class MDXNetDSPTest {
 
         float[] restoredLeft = new float[MDXNetDSP.CHUNK];
         float[] restoredRight = new float[MDXNetDSP.CHUNK];
-        MDXNetDSP.synthesize(tensor, 0, restoredLeft, window, envelope, fft, null);
-        MDXNetDSP.synthesize(tensor, 1, restoredRight, window, envelope, fft, null);
+        MDXNetDSP.synthesize(tensor, 0, restoredLeft, window, envelope, fft, null, workspace);
+        MDXNetDSP.synthesize(tensor, 1, restoredRight, window, envelope, fft, null, workspace);
 
         float maxError = 0f;
         double squareError = 0d;
