@@ -1,43 +1,74 @@
 # Java DEX bridge
 
-This directory contains the Java-side bridge source for the CSR extension. It is not an APK and does not create an Android application.
+Direktori ini berisi sumber kelas Java penghubung yang ditujukan untuk ekstensi CSR/Jieshuo. Ini bukan APK dan tidak membuat aplikasi Android mandiri.
 
-## JNI class contract
+## Kontrak Lua yang mengikuti referensi
 
-The C++ JNI source registers native methods on the class selected by CMake. This bridge deliberately uses the default-package class name DJLEngine, so the native build must use:
+Lua pada PPK referensi menggunakan refleksi untuk memanggil empat metode statis dengan argumen String:
+
+- `muat(String soPath)`
+- `mulai(String audioPath, String workDir, String jobId)`
+- `batal(String workDir, String jobId)`
+- `hidup(String jobId)`
+
+Kelas `DJLEngine.java` mempertahankan nama dan signature tersebut agar pola pemanggilan `MD.panggil()` dan pemantauan status Lua dapat digunakan kembali.
+
+## Kontrak JNI Demucs
+
+Mesin upstream mendaftarkan native method pada kelas yang ditentukan oleh CMake. Kelas bridge ini memakai default package, sehingga build native harus memakai:
 
 ```cmake
 set(SDENGINE_JNI ON)
 set(SDENGINE_JNI_CLASS "DJLEngine")
 ```
 
-The nested callback interface must remain named `DJLEngine$ProgressListener`; its method signature is `boolean onProgress(float fraction, String stage)`. These details must match the JNI registration table exactly.
+JNI memerlukan interface bertingkat bernama `DJLEngine$ProgressListener` dengan metode:
 
-## Runtime contract
+`boolean onProgress(float fraction, String stage)`
 
-1. Lua loads the Java class from its DEX container using the extension's class-loading pattern.
-2. Lua calls `DJLEngine.loadNativeLibrary(absoluteSoPath)` from that class.
-3. The class calls `System.load(absoluteSoPath)`; JNI_OnLoad registers native methods against DJLEngine.
-4. Lua posts `DJLEngine.run(...)` to the dedicated worker HandlerThread, never to the UI thread.
-5. Lua reads the status file written atomically by the Java bridge.
-6. Lua calls `DJLEngine.cancel(cancelPath)` when the user requests cancellation.
+Signature dan nama ini harus dipertahankan bersama dengan tabel registrasi native di upstream.
 
-## Input requirements
+## Alur kerja
 
-`rawPath` must be a file containing interleaved float32 PCM. This Java bridge does not decode compressed MP3/M4A/FLAC input. The CSR-side MediaExtractor/MediaCodec path must be adapted to write decoder output as float32 incrementally before calling `run`.
+1. Lua mencari DEX dan SO berdasarkan ABI, lalu menyalinnya ke direktori privat.
+2. Lua memuat kelas `DJLEngine` dengan `DexClassLoader`.
+3. Lua memanggil `muat(soPath)`; metode tersebut memanggil `System.load(absolutePath)`. JNI_OnLoad mendaftarkan native method pada kelas DEX yang sama.
+4. Lua memanggil `mulai(audioPath, workDir, jobId)`. Metode ini memulai satu Java worker thread.
+5. Worker mendekode audio melalui MediaExtractor/MediaCodec menjadi file raw interleaved float32 secara bertahap.
+6. Worker memanggil native prepare dan separation; progres ditulis ke file status.
+7. Lua membaca status secara berkala dan tetap responsif.
+8. Lua memanggil `batal(workDir, jobId)` untuk membuat marker pembatalan dan meminta pembatalan native.
 
-The existing tempo/chord reference decodes audio into short arrays for its analysis. That array path must not be reused to buffer an entire song for source separation.
+Pekerjaan native dibatasi satu pada satu waktu karena pembatalan mesin upstream bersifat global.
 
-## Status format
+## Model
 
-The status file is a single UTF-8 line:
+Bridge mencari bobot di folder yang sama dengan pustaka SO:
 
-`stage|percent|message|updatedEpochMillis`
+`5c90dfd2.safetensors`
 
-The bridge writes to a sibling `.tmp` file and uses Android `Os.rename` for replacement. Lua should tolerate a missing or temporarily unreadable status file and should announce meaningful stage/progress changes only.
+Berkas tersebut adalah bobot Demucs v4.1.0 htdemucs_6s yang dirujuk upstream. SHA-256 yang harus diverifikasi sebelum digunakan:
 
-## Build notes
+`d2a1745f0744721f6b8ca5bf469b67c651ea5ed1b52998cab033b2158609d411`
 
-Compile `DJLEngine.java` against the Android platform android.jar (API 29 or newer), then convert the class to DEX with the Android build-tools D8 compiler. Package the DEX in the exact container format accepted by the CSR class-loading code. Do not assume whether the reference expects a raw .dex or a JAR/APK wrapper until that loader implementation has been inspected.
+Lua perlu menyalin bobot secara streaming ke folder privat mesin; jangan memakai helper yang membaca seluruh 55 MB ke satu string Lua.
 
-Keep the class name and nested interface name unchanged unless the CMake `SDENGINE_JNI_CLASS` value and JNI descriptors are updated together.
+## Input audio
+
+Decoder menulis PCM float32 interleaved ke file. Lagu tidak disimpan seluruhnya sebagai array Java. Mesin menyiapkan file itu menjadi stereo 44,1 kHz, kemudian memproses segmen dan menulis enam WAV.
+
+Format PCM yang saat ini ditangani bridge: float32, signed 16-bit, unsigned 8-bit, packed 24-bit, dan signed 32-bit. Format output decoder yang tidak dikenali harus menghasilkan pesan galat yang jelas, bukan diteruskan sebagai data rusak.
+
+## Status dan hasil
+
+Status ditulis sebagai satu baris UTF-8:
+
+`state|percent|stage|message|timestamp`
+
+Nilai state mengikuti referensi Lua: `jalan`, `selesai`, `galat`, `batal`.
+
+Hasil JSON menyimpan path enam file WAV. Lua perlu membaca format hasil Vocal Remover ini, bukan memakai parser JSON hasil tempo/nada/chord pada ekstensi referensi.
+
+## Batas validasi
+
+Kode bridge ini merupakan implementasi awal yang belum dikompilasi dengan Android SDK/NDK dan belum diuji pada Redmi 13C. DEX hasil build, signature JNI, decoder MediaCodec, pemulihan worker, serta aksesibilitas layar CSR harus diuji sebelum paket dinyatakan siap.
