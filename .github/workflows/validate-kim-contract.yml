@@ -6,6 +6,7 @@ on:
     paths:
       - "bridge/java/DJLEngine.java"
       - "bridge/lua/DJLBridge.lua"
+      - "bridge/test/**"
       - "main.lua"
       - ".github/workflows/validate-kim-contract.yml"
 
