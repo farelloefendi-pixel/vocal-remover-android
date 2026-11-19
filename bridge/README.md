@@ -84,3 +84,10 @@ Lua memantau status melalui Handler pada thread UI. Native callback progres tida
 - Build CI dapat mengompilasi pustaka JNI, DEX, dan sintaks Lua, tetapi belum menguji runtime CSR.
 - Pemanggilan JNI untuk prepare/resampling, decoder MediaCodec, inferensi ONNX CPU, pembatalan, pemulihan, serta navigasi screen reader harus diuji pada perangkat sasaran.
 - Hasil saat ini disimpan di direktori privat. Ekspor ke folder Musik bersama belum tersedia.
+
+
+## Kim Vocal 2 integration update
+
+The Java bridge now contains the initial Kim Vocal 2 MDX-Net path: Bluestein FFT for 7680-point transforms, periodic-Hann centered STFT, `[1,4,3072,256]` complex tensor packing, ONNX inference, inverse STFT, center trimming, compensation, and residual instrumental output. A numerical round-trip test is part of CI. This integration remains a test candidate until the round-trip test, package build, real-model inference, audio checks, and Android screen-reader tests all pass.
+
+The old JNI library is currently retained only because its `nativePrepareInput` helper is still used to prepare stereo 44.1 kHz PCM. The old native separation method is not called. A later cleanup should replace the helper with a standalone audio-preparation implementation.
