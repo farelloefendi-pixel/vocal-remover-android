@@ -280,10 +280,10 @@ public final class DJLEngine {
                 long[] inputShape = inputInfo.getShape();
                 long[] outputShape = outputInfo.getShape();
                 long[] expectedShape = new long[] { 1, 4, 3072, 256 };
-                if (!java.util.Arrays.equals(inputShape, expectedShape)) {
+                if (!sameKimShape(inputShape)) {
                     return "GALAT|Bentuk input Kim Vocal 2 tidak sesuai kontrak [1,4,3072,256]";
                 }
-                if (!java.util.Arrays.equals(outputShape, expectedShape)) {
+                if (!sameKimShape(outputShape)) {
                     return "GALAT|Bentuk output Kim Vocal 2 tidak sesuai kontrak [1,4,3072,256]";
                 }
                 int values = 4 * 3072 * 256;
@@ -617,8 +617,8 @@ public final class DJLEngine {
             TensorInfo inInfo = (TensorInfo) session.getInputInfo().get("input").getInfo();
             TensorInfo outInfo = (TensorInfo) session.getOutputInfo().get("output").getInfo();
             long[] expectedShape = new long[] {1, 4, MDXNetDSP.DIM_F, MDXNetDSP.DIM_T};
-            if (!sameShape(inInfo.getShape(), expectedShape)
-                    || !sameShape(outInfo.getShape(), expectedShape)) {
+            if (!sameKimShape(inInfo.getShape())
+                    || !sameKimShape(outInfo.getShape())) {
                 throw new IOException("Bentuk tensor Kim Vocal 2 tidak sesuai [1,4,3072,256]");
             }
 
@@ -674,7 +674,7 @@ public final class DJLEngine {
                     try (OrtSession.Result result = session.run(feeds, runOptions)) {
                         OnnxTensor outputTensor = (OnnxTensor) result.get("output").orElse(null);
                         if (outputTensor == null
-                                || !sameShape(outputTensor.getInfo().getShape(), expectedShape)) {
+                                || !sameKimShape(outputTensor.getInfo().getShape())) {
                             throw new IOException("Output inferensi Kim Vocal 2 tidak valid");
                         }
                         FloatBuffer values = outputTensor.getFloatBuffer();
@@ -719,6 +719,14 @@ public final class DJLEngine {
             }
             options.close();
         }
+    }
+
+    private static boolean sameKimShape(long[] actual) {
+        return actual != null && actual.length == 4
+                && (actual[0] == 1L || actual[0] == -1L)
+                && actual[1] == 4L
+                && actual[2] == MDXNetDSP.DIM_F
+                && actual[3] == MDXNetDSP.DIM_T;
     }
 
     private static boolean sameShape(long[] actual, long[] expected) {
