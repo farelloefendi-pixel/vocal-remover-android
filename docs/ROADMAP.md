@@ -55,10 +55,10 @@
 
 - [ ] Pastikan izin tertulis Kim Vocal 2, atribusi, dan bukti hak distribusi diarsipkan.
 - [x] Tambahkan workflow build PPK Kim Vocal 2; helper JNI lama masih dipakai untuk persiapan PCM dan perlu dipisahkan dari mesin Demucs.
-- [ ] Selesaikan build DEX, native ARM64, dan paket PPK baru.
-- [ ] Uji instalasi, pemuatan, pemisahan nyata, pembatalan, dan aksesibilitas.
+- [x] Build DEX, native ARM64, dan paket PPK kandidat berhasil pada CI run 44555528609.
+- [ ] Uji instalasi, pemuatan model di Android, pemisahan audio nyata, pembatalan, dan aksesibilitas pada Redmi 13C.
 - [ ] Rilis hanya setelah seluruh kriteria penerimaan lulus.
 
 ## Status saat ini
 
-Kontrak identitas Kim Vocal 2, checksum, dan smoke test tensor sudah disiapkan. Mesin lama diblokir. Pipeline DSP awal, direct-DFT, round-trip, model ONNX CPU smoke inference, kompilasi Java/D8, dan sintaks Lua telah lulus CI. Build PPK ARM64 masih berlangsung. Belum ada hasil uji audio nyata atau uji perangkat.
+Kontrak identitas Kim Vocal 2, checksum, dan smoke test tensor sudah disiapkan. Mesin lama diblokir. Pipeline DSP awal, direct-DFT, round-trip, model ONNX CPU smoke inference, kompilasi Java/D8, dan sintaks Lua telah lulus CI. Paket PPK kandidat ARM64 sudah berhasil dibangun dan arsipnya tervalidasi. SHA-256 PPK: `8e3220e117e7dbcfbe420f581306e55f3998c08f104ab1c9f3165a2616592392`. Belum ada hasil uji pemisahan audio nyata atau uji perangkat.
