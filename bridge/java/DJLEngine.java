@@ -153,6 +153,7 @@ public final class DJLEngine {
             writeStatus(status, "jalan", 0, "Membuka audio", "Menyiapkan pekerjaan");
             checkCancelled(cancel);
 
+            verifyModel(modelPath);
             String modelError = nativeLoadModel(modelPath);
             if (modelError != null && modelError.length() > 0) {
                 throw new IllegalStateException(modelError);
@@ -161,6 +162,9 @@ public final class DJLEngine {
 
             writeStatus(status, "jalan", 1, "Mendekode audio", "Membaca sumber audio");
             AudioInfo info = decodeToFloat32(audioPath, raw, status, cancel);
+            if (info.sampleRate < 8000 || info.channels < 1) {
+                throw new IOException("Format audio hasil decode tidak valid");
+            }
             checkCancelled(cancel);
 
             ProgressListener prepareProgress = new ProgressListener() {
@@ -221,6 +225,9 @@ public final class DJLEngine {
             raw.delete();
             prepared.delete();
             cancel.delete();
+            synchronized (WORKERS) {
+                WORKERS.remove(id);
+            }
             RUNNING.set(false);
         }
     }
@@ -250,6 +257,7 @@ public final class DJLEngine {
         long durationUs = 0;
         long lastStatus = 0;
         long bytesWritten = 0;
+        long lastActivity = System.currentTimeMillis();
 
         try {
             extractor.setDataSource(inputPath);
@@ -307,6 +315,7 @@ public final class DJLEngine {
                                     extractor.getSampleTime(), 0);
                             extractor.advance();
                         }
+                        lastActivity = System.currentTimeMillis();
                     }
                 }
 
@@ -342,6 +351,7 @@ public final class DJLEngine {
                         outputDone = true;
                     }
                     codec.releaseOutputBuffer(outputIndex, false);
+                    lastActivity = System.currentTimeMillis();
                 } else if (outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                     MediaFormat outputFormat = codec.getOutputFormat();
                     int newRate = outputFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
@@ -357,6 +367,11 @@ public final class DJLEngine {
                     channels = newChannels;
                     pcmEncoding = newEncoding;
                     outputFormatKnown = true;
+                    lastActivity = System.currentTimeMillis();
+                }
+
+                if (System.currentTimeMillis() - lastActivity > 60000) {
+                    throw new IOException("Decoder tidak merespons selama 60 detik");
                 }
             }
 
@@ -448,6 +463,26 @@ public final class DJLEngine {
         }
 
         throw new IOException("Format PCM decoder belum didukung: " + encoding);
+    }
+
+
+    private static void verifyModel(String path) throws Exception {
+        final String expected = "d2a1745f0744721f6b8ca5bf469b67c651ea5ed1b52998cab033b2158609d411";
+        java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+        try (java.io.FileInputStream input = new java.io.FileInputStream(path)) {
+            byte[] buffer = new byte[1024 * 1024];
+            int count;
+            while ((count = input.read(buffer)) != -1) {
+                digest.update(buffer, 0, count);
+            }
+        }
+        StringBuilder actual = new StringBuilder();
+        for (byte value : digest.digest()) {
+            actual.append(String.format("%02x", value & 0xff));
+        }
+        if (!expected.equals(actual.toString())) {
+            throw new IOException("Checksum model tidak cocok. Unduh ulang 5c90dfd2.safetensors.");
+        }
     }
 
     private static void writeStatus(File target, String state, int percent,
