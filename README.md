@@ -19,7 +19,7 @@ Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal mema
 
 ## Struktur implementasi
 
-- `main.lua`: menu CSR, pemilih audio, progres, pembatalan, dan daftar enam hasil.
+- `main.lua`: menu CSR, pemilih audio, progres, pembatalan, dan daftar enam stem dan instrumental.
 - `bridge/lua/DJLBridge.lua`: adapter Lua mengikuti pola `MD` pada PPK referensi.
 - `bridge/java/DJLEngine.java`: kelas DEX, decoder MediaCodec, unduhan model, worker, dan pemanggilan JNI.
 - `.github/workflows/build-engine.yml`: build C++ ARM64, unduh dependensi ONNX Runtime Android 1.32.0, paketkan kedua library native ORT, gabungkan API Java ke DEX, periksa kelas dan ABI, cek signature JNI, sintaks Lua, alignment ELF 16 KB, lalu kemas PPK.
