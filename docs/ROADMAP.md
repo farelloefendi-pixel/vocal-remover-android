@@ -9,19 +9,22 @@
 - [x] Identifikasi perbedaan kontrak PCM array pada JNI referensi.
 - [ ] Periksa bytecode `DJLEngine.dex` secara penuh untuk memverifikasi metode dan lifecycle Java.
 
-## Tahap 1 — validasi mesin
+## Tahap 1 — audit dan validasi mesin
 
-- [ ] Audit sumber mesin pemisah dan dependensinya.
-- [ ] Pastikan model, format bobot, lisensi, dan checksum.
-- [ ] Pastikan jalur inferensi benar-benar dapat dibangun untuk Android ARM64.
+- [x] Audit API C++ dan binding JNI dari repositori Demucs Android.
+- [x] Identifikasi model enam sumber, format bobot, kebutuhan build, dan checksum yang dinyatakan upstream.
+- [ ] Periksa teks lisensi dan atribusi seluruh dependensi sebelum distribusi.
+- [ ] Pastikan jalur inferensi dapat dibangun untuk Android ARM64 dalam lingkungan build yang tersedia.
 - [ ] Buat uji native minimal yang tidak bergantung pada UI.
-- [ ] Ukur penggunaan RAM, waktu, suhu, dan stabilitas.
+- [ ] Ukur penggunaan RAM, waktu, suhu, dan stabilitas pada perangkat sasaran.
 
 ## Tahap 2 — kontrak Java DEX dan JNI
 
-- [ ] Rancang API Java untuk prepare/start/status/cancel/release.
+- [x] Tentukan arah adaptasi: kelas Java DEX CSR menggantikan contoh binding Kotlin upstream.
+- [x] Tentukan input mesin berupa file raw float32, bukan satu array PCM besar.
+- [ ] Rancang API Java final untuk prepare/start/status/cancel/release.
 - [ ] Implementasikan worker native yang tidak memblokir thread UI.
-- [ ] Gunakan input berbasis path dan buffer/segmen terbatas.
+- [ ] Implementasikan decode MediaCodec ke file float32 secara bertahap.
 - [ ] Implementasikan penulisan enam stem bertahap.
 - [ ] Uji pembatalan saat decode, inferensi, dan ekspor.
 - [ ] Uji pemulihan setelah ekstensi ditutup atau proses dihentikan sistem.
