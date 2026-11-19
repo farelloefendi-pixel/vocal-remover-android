@@ -124,7 +124,7 @@ end
 function M.siapkan()
   if not ctx then return nil, "Context CSR belum diinisialisasi" end
   local properties = System.getProperties()
-  local cacheKey = "vocalremover.kimmdx.ort131.v4"
+  local cacheKey = "vocalremover.kimmdx.ort131.v5"
   local tersimpan = properties.get(cacheKey)
   if tersimpan ~= nil and tostring(tersimpan) ~= "LOADING" then
     kelas = tersimpan
