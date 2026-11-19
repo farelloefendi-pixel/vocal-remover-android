@@ -21,11 +21,11 @@ Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal diba
 - `main.lua`: menu CSR, pemilih audio, progres, pembatalan, dan daftar enam hasil.
 - `bridge/lua/DJLBridge.lua`: adapter Lua mengikuti pola `MD` pada PPK referensi.
 - `bridge/java/DJLEngine.java`: kelas DEX, decoder MediaCodec, unduhan model, worker, dan pemanggilan JNI.
-- `.github/workflows/build-engine.yml`: build otomatis C++ ARM64, DEX, pemeriksaan sintaks Lua, dan pengemasan PPK.
+- `.github/workflows/build-engine.yml`: build otomatis C++ ARM64, DEX, pemeriksaan signature JNI, sintaks Lua, alignment ELF 16 KB, dan pengemasan PPK.
 
 ## Build otomatis
 
-[Mengunduh artefak PPK development](https://github.com/farelloefendi-pixel/vocal-remover-android/actions/runs/44529097617/artifacts/14532888320) · [Melihat seluruh build](https://github.com/farelloefendi-pixel/vocal-remover-android/actions)
+[Mengunduh artefak PPK development](https://github.com/farelloefendi-pixel/vocal-remover-android/actions/runs/44530662056/artifacts/14534425274) · [Melihat seluruh build](https://github.com/farelloefendi-pixel/vocal-remover-android/actions)
 
 Jika build terbaru berhasil, artefak development `Vocal_Remover_CSR_DEV.ppk` tersedia pada bagian Artifacts di halaman run. Paket ini hanya untuk menguji struktur dan antarmuka, belum dapat memisahkan audio karena model ditahan. Binary DEX dan SO juga disediakan terpisah untuk pemeriksaan.
 
