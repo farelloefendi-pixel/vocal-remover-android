@@ -1,6 +1,7 @@
 local M = {}
 
-local MODEL_URL = "https://huggingface.co/adefossez/HTDemucs-6s/resolve/3c5ee475be622df764938de97e4281a7b07ffa58/5c90dfd2.safetensors"
+local MODEL_URL = nil
+local MODEL_ENABLED = false
 local MODEL_STATUS = "model_status.txt"
 local ACTIVE_FILE = "aktif.txt"
 
@@ -180,6 +181,9 @@ function M.lokasiModel()
 end
 
 function M.modelSiap()
+  if not MODEL_ENABLED then
+    return false, "HTDemucs 6-stem ditahan: lisensi bobot belum mengizinkan penggunaan umum. Pilih model alternatif yang lisensinya jelas."
+  end
   local kls, pesan = M.siapkan()
   if not kls then return false, pesan end
   local ok, hasil = pcall(function() return M.panggil(kls, "modelSiap", 0, {}) end)
@@ -189,6 +193,9 @@ function M.modelSiap()
 end
 
 function M.unduhModel()
+  if not MODEL_ENABLED or not MODEL_URL then
+    return false, "Unduhan HTDemucs dinonaktifkan sementara karena lisensi bobot belum jelas."
+  end
   local kls, pesan = M.siapkan()
   if not kls then return false, pesan end
   if unduhAktif then return false, "Pengunduhan model sudah berjalan" end
@@ -250,6 +257,9 @@ function M.statusModel()
 end
 
 function M.pasangModel(path)
+  if not MODEL_ENABLED then
+    return false, "Pemasangan HTDemucs dinonaktifkan sementara karena lisensi bobot belum jelas."
+  end
   local kls, pesan = M.siapkan()
   if not kls then return false, pesan end
   local ok, hasil = pcall(function()
