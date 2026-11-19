@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Java bridge loaded by the CSR extension through DexClassLoader.
  * Keep the class in the default package: the native build registers on DJLEngine.
  *
- * Lua calls muat(String), mulai(String,String,String), batal(String,String),
+ * Lua calls muat(String,String), mulai(String,String,String), batal(String,String),
  * and hidup(String). Long work runs on this class's own Java worker thread.
  */
 public final class DJLEngine {
@@ -62,7 +62,7 @@ public final class DJLEngine {
     private static native String nativeComputeInfo(int computeThreads, boolean gpu);
     private static native void nativeCancel();
 
-    /** Matches the exact one-String method invoked by MD.siapkan() in the reference Lua. */
+    /** Initializes the native preparation library and ONNX Runtime paths. */
     public static synchronized String muat(String soPath, String ortDirectory) {
         try {
             if (soPath == null || soPath.length() == 0) {
