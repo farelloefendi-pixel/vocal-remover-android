@@ -336,7 +336,6 @@ public final class DJLEngine {
             if (!root.exists() && !root.mkdirs()) {
                 throw new IOException("Folder kerja tidak bisa dibuat");
             }
-            cancel.delete();
             writeStatus(status, "jalan", 0, "Memuat model", "Memeriksa bobot dan menyiapkan mesin Demucs");
             checkCancelled(cancel);
 
