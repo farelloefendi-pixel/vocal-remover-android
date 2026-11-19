@@ -13,8 +13,8 @@ Karena proyek ini ditujukan untuk pemisahan musik pribadi dan belum ada dasar ya
 1. Isu resmi Demucs [#327 — License of pre-trained models](https://github.com/facebookresearch/demucs/issues/327) menanyakan apakah bobot model ikut MIT.
 2. Pemelihara Demucs, `adefossez`, menjawab pada 23 Mei 2022: bobot model tidak tercakup MIT dan hanya disediakan untuk tujuan ilmiah. [Komentar asli](https://github.com/facebookresearch/demucs/issues/327#issuecomment-1134828611).
 3. Pertanyaan lanjutan pada Juni 2024 tentang bobot yang dikonversi/didistribusikan ulang tidak memperoleh jawaban dari pemelihara.
-4. Halaman Hugging Face HTDemucs-6s saat ini tidak memberikan dasar lisensi baru yang mengesampingkan pernyataan pemelihara. Riwayatnya mencatat penghapusan metadata lisensi.
-5. README repositori Demucs Android menyebut bobot 55 MB sebagai MIT, tetapi pernyataan itu bertentangan dengan jawaban pemelihara model di repositori Demucs asli. Untuk kehati-hatian, klaim README turunan tidak diperlakukan sebagai pemberian hak dari pemilik bobot.
+4. Repositori ekspor StemSplitio/htdemucs-6s-onnx saat ini menampilkan metadata License: mit dan model card menyatakan repositori ONNX berlisensi MIT, matching the original HT-Demucs. Ini adalah klaim penerbit ekspor yang relevan; namun klaim itu bertentangan dengan jawaban pemelihara Demucs pada issue #327 yang secara eksplisit mengecualikan bobot pretrained dari MIT. Metadata repositori ekspor tidak dengan sendirinya membuktikan bahwa penerbit memiliki hak untuk memberikan ulang lisensi atas bobot dasar.
+5. README repositori Demucs Android menyebut bobot 55 MB sebagai MIT, tetapi pernyataan itu bertentangan dengan jawaban pemelihara model di repositori Demucs asli. Untuk kehati-hatian, klaim README turunan dan metadata ekspor pihak ketiga tidak diperlakukan sebagai pemberian hak yang pasti dari pemilik bobot.
 
 ## Pisahkan lisensi kode dan bobot
 
@@ -75,6 +75,17 @@ Repositori konversi ONNX pihak ketiga menuliskan argumen bahwa paper JOSS merupa
 - [README resmi Spleeter](https://github.com/deezer/spleeter)
 - [Issue klarifikasi lisensi #959](https://github.com/deezer/spleeter/issues/959)
 - [NOTICE konversi ONNX](https://github.com/matthewbae/spleeter-onnx-models/blob/main/NOTICE)
+
+
+### HTDemucs 6-stem ONNX dari StemSplitio
+
+Repositori https://huggingface.co/StemSplitio/htdemucs-6s-onnx menyediakan dua file: ONNX FP32 sekitar 258 MB dan varian FP16-weights sekitar 136 MB. Model card menyebut enam keluaran (drums, bass, other, vocals, guitar, piano), input stereo 44,1 kHz dengan segmen 343.980 sampel (7,8 detik), serta menyatakan repositori MIT yang cocok dengan HT-Demucs asli. Skrip inferensi infer.py juga tersedia di repositori yang sama.
+
+Pernyataan MIT ini belum menyelesaikan konflik hak bobot. Issue resmi Demucs #327 memuat jawaban pemelihara bahwa pretrained weights tidak tercakup MIT dan hanya untuk tujuan ilmiah. Sampai ada konfirmasi yang dapat mengatasi konflik tersebut atau izin tertulis yang sesuai, model ONNX ini tetap tidak diunduh, tidak dibundel, dan tidak diaktifkan. Ukuran 136 MB adalah ukuran unduhan, bukan kebutuhan RAM saat inferensi; penerbit melaporkan sekitar 1,1 GB RAM per segmen pada Apple M4 Pro, bukan hasil uji Android.
+
+- Model card: https://huggingface.co/StemSplitio/htdemucs-6s-onnx
+- Skrip inferensi: https://huggingface.co/StemSplitio/htdemucs-6s-onnx/blob/main/infer.py
+- Issue lisensi bobot Demucs #327: https://github.com/facebookresearch/demucs/issues/327
 
 ## Keputusan yang masih diperlukan
 
