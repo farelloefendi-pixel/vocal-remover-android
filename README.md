@@ -48,3 +48,4 @@ Mesin HTDemucs 6-stem dipertahankan sebagai prototipe kode, tetapi penggunaan bo
 - [Panduan alur CSR](docs/PENGGUNAAN_CSR.md)
 - [Roadmap dan pengujian](docs/ROADMAP.md)
 - [Kandidat alternatif Spleeter 5-stem ONNX](docs/ALTERNATIF_SPLEETER_ONNX.md)
+- [Perbandingan dan keputusan kandidat model](docs/KEPUTUSAN_MODEL.md)
