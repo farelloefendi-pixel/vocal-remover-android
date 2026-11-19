@@ -9,7 +9,8 @@ Produk akhir adalah ekstensi CSR/Jieshuo dalam paket PPK. Tidak ada APK mandiri.
 Paket yang dibuat CI berisi:
 - `main.lua`
 - `DJLEngine.dex`
-- `libdjl64.so` untuk ABI ARM64
+- `libdjl64.so` untuk ABI ARM64 (mesin Demucs prototipe)
+- `libonnxruntime.so` untuk ABI ARM64 (ONNX Runtime Android 1.32.0)
 - `bridge/lua/DJLBridge.lua`
 
 Model HTDemucs tidak dibundel dan saat ini tidak diunduh atau digunakan. Integrasi model ditahan sampai hak penggunaan bobot jelas.
@@ -31,8 +32,9 @@ CSR / Jieshuo
     - status tugas berbasis file
         |
         v
-  DJLEngine.dex (Java)
-    - System.load pustaka native
+  DJLEngine.dex (Java + API ONNX Runtime)
+    - System.load pustaka native C++ lama
+    - inisialisasi OrtEnvironment melalui DexClassLoader
     - unduh model streaming + checksum
     - MediaExtractor / MediaCodec
     - worker tunggal
@@ -162,7 +164,7 @@ Status: kontrak dan batas memori sudah didokumentasikan; runtime ONNX, inferensi
 
 ## 12. Jalur integrasi ONNX Runtime yang sedang dinilai
 
-Kandidat enam stem ONNX tidak kompatibel langsung dengan JNI Demucs yang sekarang. Integrasi memerlukan runtime ONNX Android ARM64, pemuatan model ONNX, tensor input stereo 44,1 kHz, pemrosesan segmen sekitar 7,8 detik dengan overlap-add, dan penulisan enam keluaran WAV. Jalur ini belum diimplementasikan pada paket saat ini.
+Kandidat enam stem ONNX tidak kompatibel langsung dengan JNI Demucs yang sekarang. Runtime Android dan kelas Java ONNX sudah dipaketkan serta inisialisasinya disiapkan melalui bridge; pemuatan model, tensor input stereo 44,1 kHz, inferensi segmen sekitar 7,8 detik dengan overlap-add, dan penulisan enam keluaran WAV belum diimplementasikan.
 
 ONNX Runtime Android 1.32.0 kini ditambahkan sebagai dependensi AAR resmi Maven Central. Workflow mengambil versi yang dipatok, mengekstrak kelas Java dan pustaka ARM64, menggabungkan kelas API ONNX ke DEX, serta memasukkan libonnxruntime.so ke paket. DexClassLoader diberi jalur pencarian pustaka native privat sehingga API Java ONNX Runtime dapat menemukan libonnxruntime.so. DJLEngine memanggil OrtEnvironment.getEnvironment() saat bridge dimuat sebagai pemeriksaan inisialisasi runtime.
 
