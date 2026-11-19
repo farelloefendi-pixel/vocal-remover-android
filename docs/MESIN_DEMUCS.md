@@ -78,7 +78,10 @@ README upstream menyebut bobot htdemucs_6s v4.1.0 berukuran sekitar 55 MB dan be
 
 d2a1745f0744721f6b8ca5bf469b67c651ea5ed1b52998cab033b2158609d411
 
-Bobot tidak akan disimpan langsung di Git. Saat distribusi, sumber unduhan dan checksum harus diverifikasi.
+Sumber bobot upstream:
+https://huggingface.co/adefossez/HTDemucs-6s/resolve/3c5ee475be622df764938de97e4281a7b07ffa58/5c90dfd2.safetensors
+
+Nama berkas yang diharapkan bridge adalah `5c90dfd2.safetensors`. Bobot tidak akan disimpan langsung di Git. Saat digunakan, bridge memeriksa SHA-256 sebelum memuat model.
 
 Berkas lisensi upstream menyebut mesin repository MIT dengan atribusi Jeroen Paauwe dan Sevag H; bagian src/demucs memiliki berkas lisensi MIT tersendiri. README upstream menyebut bobot Demucs MIT dan Eigen MPL 2.0. Salinan teks lisensi dan atribusi seluruh dependensi tetap harus diperiksa dan disertakan saat paket distribusi dibuat.
 
