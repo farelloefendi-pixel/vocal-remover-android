@@ -21,11 +21,12 @@ Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal haru
 
 `main.lua` mengelola antarmuka CSR dan memanggil kelas Java dari DEX melalui `DexClassLoader`. Kelas Java memuat pustaka native ARM64 (`.so`) dan menjadi penghubung JNI ke mesin C++. Mesin memproses audio dan menghasilkan berkas stem.
 
-Pola pemuatan DEX, pemilihan pustaka berdasarkan arsitektur, pemisahan pekerjaan dari utas antarmuka, pemantauan status, dan permintaan pembatalan akan mengacu pada ekstensi referensi. Antarmuka mesin untuk Vocal Remover perlu dirancang ulang agar audio panjang tidak dikirim sebagai satu array PCM besar.
+Pola pemuatan DEX, pemilihan pustaka berdasarkan arsitektur, pemisahan pekerjaan dari utas antarmuka, pemantauan status, dan permintaan pembatalan mengacu pada ekstensi referensi. Mesin Demucs yang dipilih menyediakan API C++ dan binding JNI yang dapat diarahkan ke kelas Java DEX khusus.
 
 ## Dokumen proyek
 
 - [Pemeriksaan pola ekstensi referensi](docs/REFERENSI_INTEGRASI.md)
+- [Audit mesin Demucs C++ dan kontrak JNI](docs/MESIN_DEMUCS.md)
 - [Arsitektur teknis](docs/ARSITEKTUR.md)
 - [Tahapan pengembangan dan pengujian](docs/ROADMAP.md)
 
@@ -33,13 +34,13 @@ Pola pemuatan DEX, pemilihan pustaka berdasarkan arsitektur, pemisahan pekerjaan
 
 - Model enam stem tidak menyediakan stem rebab khusus. Hasil rebab, suling, gamelan, gender, saron, dan bonang harus diuji; tidak ada jaminan instrumen tradisional akan selalu dipertahankan sempurna.
 - Model dan binary native belum disertakan dalam repositori.
-- Tidak ada klaim bahwa mesin sudah dapat dikompilasi atau dijalankan pada perangkat sasaran.
+- Mesin belum dikompilasi atau dijalankan pada perangkat sasaran.
 - APK mandiri bukan target proyek.
 
 ## Prinsip pengembangan
 
 1. Ikuti pola integrasi yang benar-benar ditemukan pada ekstensi referensi.
-2. Jangan mengunci rancangan JNI sebelum antarmuka pemrosesan bertahap dan kebutuhan memori teruji.
+2. Adaptasi JNI untuk input audio berbasis berkas dan buffer bertahap, bukan satu array PCM besar.
 3. Jaga UI CSR tetap responsif dan fokus pembaca layar tetap stabil.
 4. Uji pada perangkat sasaran sebelum menyatakan fitur berhasil.
 5. Catat lisensi, asal model, checksum, dan instruksi distribusi sebelum menyertakan aset model.
