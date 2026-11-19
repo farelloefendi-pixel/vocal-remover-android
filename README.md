@@ -10,7 +10,7 @@ Proyek **ekstensi CSR/Jieshuo** untuk memisahkan audio musik secara offline di A
 - Hasil: vocals, drums, bass, other, guitar, dan piano.
 - Pemrosesan berjalan pada worker Java/C++, satu pekerjaan pada satu waktu.
 - Progres, pembatalan, pemulihan pekerjaan, dan pembersihan file sementara.
-- Model diunduh sekali melalui koneksi internet; pemisahan berikutnya berjalan offline.
+- Model belum diaktifkan. Bobot HTDemucs 6-stem memiliki batas lisensi yang belum jelas untuk penggunaan umum.
 
 ## Perangkat sasaran
 
@@ -27,16 +27,16 @@ Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal diba
 
 [Melihat build dan artefak ekstensi PPK di GitHub Actions](https://github.com/farelloefendi-pixel/vocal-remover-android/actions)
 
-Jika build terbaru berhasil, artefak bernama `Vocal_Remover_CSR.ppk` tersedia pada bagian Artifacts di halaman run. Binary DEX dan SO juga disediakan terpisah untuk pemeriksaan.
+Jika build terbaru berhasil, artefak development `Vocal_Remover_CSR_DEV.ppk` tersedia pada bagian Artifacts di halaman run. Paket ini hanya untuk menguji struktur dan antarmuka, belum dapat memisahkan audio karena model ditahan. Binary DEX dan SO juga disediakan terpisah untuk pemeriksaan.
 
-## Model
+## Status model
 
-Model tidak disimpan di Git dan tidak dimasukkan ke paket PPK. Saat pertama kali digunakan, ekstensi mengunduh `5c90dfd2.safetensors` dari sumber Hugging Face yang dipatok ke revisi tertentu, menyimpan secara streaming, lalu memeriksa SHA-256 sebelum digunakan. Ukuran unduhan sekitar 55 MB.
+Mesin HTDemucs 6-stem dipertahankan sebagai prototipe kode, tetapi penggunaan bobotnya ditahan karena pemelihara Demucs menyatakan bobot tidak tercakup MIT dan hanya disediakan untuk tujuan ilmiah. Pengunduhan otomatis dinonaktifkan. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan alternatif yang sedang dinilai.
 
 ## Batas validasi
 
 - Build CI membuktikan kode dapat dikompilasi dan dikemas; itu belum membuktikan pemisahan audio berhasil di Redmi 13C.
-- Pemuatan DEX/SO, JNI, MediaCodec, Vulkan/CPU, pembatalan, dan pemulihan masih perlu uji perangkat nyata.
+- Pemuatan DEX/SO, JNI, MediaCodec, Vulkan/CPU, pembatalan, dan pemulihan masih perlu uji perangkat nyata. PPK saat ini adalah paket development, bukan rilis yang berfungsi penuh.
 - Hasil saat ini disimpan pada direktori privat ekstensi dan dapat diputar dari menu hasil. Fitur ekspor ke folder musik bersama masih perlu diselesaikan dan diuji.
 - HTDemucs 6S tidak memiliki stem rebab khusus. Rebab, suling, gender, saron, bonang, dan instrumen tradisional lain harus diuji; tidak ada jaminan semuanya akan selalu terpisah sempurna.
 
