@@ -88,6 +88,7 @@ FFT 7680 bukan pangkat dua. Implementasi tidak boleh memakai DFT kuadratik seder
 - Pemeriksaan SHA-256 dipatok ke hash Kim Vocal 2.
 - Smoke test Java diperbarui untuk memeriksa node `input`/`output`, bentuk tensor Kim Vocal 2, dan nilai output finite.
 - Pemanggilan pemisahan lama diblokir agar mesin HTDemucs tidak pernah dijalankan dengan file Kim Vocal 2.
-- Pipeline DSP lengkap (STFT, FFT 7680, inferensi per segmen, iSTFT, overlap-add, dan dua WAV) belum selesai.
-- Workflow CI masih memiliki langkah membangun mesin Demucs lama dan harus diganti sebelum paket PPK dapat dianggap benar.
+- Implementasi awal DSP Java telah ditambahkan: Bluestein FFT 7680, periodic Hann STFT, tensor real/imaginary, iSTFT, center trim per segmen, kompensasi, dan dua WAV.
+- Uji numerik round-trip STFT/iSTFT sudah ditambahkan; hasil CI terakhir belum berhasil dan harus diperbaiki sebelum pipeline dianggap tervalidasi.
+- Workflow build PPK Kim Vocal 2 baru telah dibuat. Helper JNI lama masih dipakai hanya untuk decode-preparation/resampling; pemanggilan pemisahan Demucs diblokir dan tidak dipakai.
 - Model belum diaktifkan dan belum ada PPK Kim Vocal 2 yang siap dipasang.
