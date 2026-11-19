@@ -107,6 +107,36 @@ public final class DJLEngine {
         }
     }
 
+    public static synchronized String hapusModel() {
+        if (RUNNING.get()) return "GALAT|Model tidak dapat dihapus saat pemisahan berjalan";
+        if (DOWNLOADING.get()) return "GALAT|Model tidak dapat dihapus saat pengunduhan berjalan";
+        if (modelPath == null || modelPath.length() == 0) {
+            return "GALAT|Lokasi model belum ditentukan";
+        }
+        File target = new File(modelPath);
+        File download = new File(modelPath + ".download");
+        File part = new File(modelPath + ".part");
+        long ukuran = target.isFile() ? target.length() : 0L;
+        if (target.exists() && !target.delete() && target.exists()) {
+            return "GALAT|Gagal menghapus berkas model: " + target.getAbsolutePath();
+        }
+        if (download.exists() && !download.delete() && download.exists()) {
+            return "GALAT|Model utama terhapus, tetapi berkas unduhan sementara gagal dihapus";
+        }
+        if (part.exists() && !part.delete() && part.exists()) {
+            return "GALAT|Model utama terhapus, tetapi berkas sementara gagal dihapus";
+        }
+        if (target.exists() || download.exists() || part.exists()) {
+            return "GALAT|Berkas model masih tersisa di penyimpanan";
+        }
+        verifiedModelPath = null;
+        verifiedModelLength = -1;
+        verifiedModelModified = -1;
+        return "OK|Model Kim Vocal 2 dan seluruh berkas sementara berhasil dihapus dari " 
+                + target.getParent() + ". Ruang dibebaskan sekitar " 
+                + (ukuran / 1048576L) + " MB";
+    }
+
     
     public static String unduhModel(String url, String statusPath) {
         if (!libraryLoaded || modelPath == null) {
@@ -588,6 +618,51 @@ public final class DJLEngine {
         }
     }
 
+    private static final class ProgressHeartbeat implements AutoCloseable {
+        private final AtomicBoolean selesai = new AtomicBoolean(false);
+        private final Thread thread;
+
+        ProgressHeartbeat(final File status, final File cancel,
+                          final long currentChunk, final long totalChunks,
+                          final int percent) {
+            thread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    long mulai = System.currentTimeMillis();
+                    while (!selesai.get()) {
+                        try {
+                            Thread.sleep(5000L);
+                        } catch (InterruptedException interrupted) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                        if (selesai.get()) break;
+                        long elapsed = (System.currentTimeMillis() - mulai) / 1000L;
+                        String stage = cancel.exists()
+                                ? "Menghentikan segmen " + currentChunk + " dari " + totalChunks
+                                : "Memproses segmen " + currentChunk + " dari " + totalChunks;
+                        String detail = "Segmen masih dikerjakan; waktu berjalan "
+                                + elapsed + " detik. Persentase bertambah setelah segmen selesai.";
+                        writeStatus(status, "jalan", percent, stage, detail);
+                    }
+                }
+            }, "VocalRemover-Progress");
+            thread.setDaemon(true);
+            thread.start();
+        }
+
+        @Override
+        public void close() {
+            selesai.set(true);
+            thread.interrupt();
+            try {
+                thread.join(1000L);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
     private static void separateOnnxStreaming(
             File prepared, File output, File status, File cancel) throws Exception {
         long bytes = prepared.length();
@@ -650,6 +725,11 @@ public final class DJLEngine {
 
             activeRunOptions = runOptions;
             for (long chunk = 0; chunk < chunks; chunk++) {
+                final long currentChunk = chunk + 1L;
+                final int completedPercent = 30 + (int) (chunk * 70L / chunks);
+                ProgressHeartbeat heartbeat = new ProgressHeartbeat(
+                        status, cancel, currentChunk, chunks, completedPercent);
+                try {
                 checkCancelled(cancel);
                 long chunkStart = chunk * MDXNetDSP.STEP;
                 long inputStart = chunkStart - MDXNetDSP.BORDER;
@@ -737,7 +817,10 @@ public final class DJLEngine {
 
                 int percent = 30 + (int) ((chunk + 1L) * 70L / chunks);
                 writeStatus(status, "jalan", percent, "Memisahkan audio",
-                        "Segmen " + (chunk + 1L) + " dari " + chunks);
+                        "Segmen " + currentChunk + " dari " + chunks + " selesai");
+                } finally {
+                    heartbeat.close();
+                }
             }
 
             for (WavPcm16Writer writer : writers) writer.close();
