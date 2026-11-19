@@ -84,6 +84,8 @@ jobs:
           cp licenses/* dist/licenses/
           file dist/libdjl64.so dist/DJLEngine.dex
           readelf -h dist/libdjl64.so | grep -E 'Class:|Machine:'
+          readelf -l dist/libdjl64.so | tee dist/ELF_PROGRAM_HEADERS.txt
+          grep -q '0x4000' dist/ELF_PROGRAM_HEADERS.txt
           sha256sum dist/libdjl64.so dist/DJLEngine.dex | tee dist/SHA256SUMS.txt
           (cd dist && zip -q -r Vocal_Remover_CSR_DEV.ppk main.lua DJLEngine.dex libdjl64.so bridge/lua/DJLBridge.lua licenses)
           unzip -l dist/Vocal_Remover_CSR_DEV.ppk
