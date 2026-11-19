@@ -996,7 +996,7 @@ public final class DJLEngine {
                 && modified == verifiedModelModified) {
             return;
         }
-        final String expected = "7ce55792e2231c93fbf92de95f5fd5b3a5e6c89f7db690dfd693e8f1dce56869";
+        final String expected = "ce74ef3b6a6024ce44211a07be9cf8bc6d87728cc852a68ab34eb8e58cde9c8b";
         java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
         try (java.io.FileInputStream input = new java.io.FileInputStream(path)) {
             byte[] buffer = new byte[1024 * 1024];
