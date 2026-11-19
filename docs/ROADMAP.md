@@ -19,7 +19,7 @@
 - [x] Selaraskan dokumentasi arsitektur, kualitas, referensi, dan lisensi.
 - [x] Pensiunkan workflow build lama yang membangun mesin Demucs dan menghasilkan paket yang tidak cocok.
 - [x] Tambahkan workflow validasi kompilasi Java/DEX dan sintaks Lua.
-- [ ] Pastikan workflow validasi baru berhasil.
+- [x] Workflow validasi berhasil: checksum model, inferensi ONNX CPU, kompilasi Java/D8, direct-DFT, round-trip DSP, dan sintaks Lua lulus.
 
 ## Tahap 2 — DSP MDX-Net
 
@@ -30,7 +30,7 @@
 - [x] Integrasikan inferensi ONNX satu segmen dengan validasi node dan bentuk tensor.
 - [x] Implementasikan iSTFT dan normalisasi envelope.
 - [x] Implementasikan center trim, padding batas, dan penyambungan segmen tanpa kehilangan atau duplikasi sampel.
-- [ ] Luluskan uji numerik round-trip STFT/iSTFT terhadap implementasi referensi.
+- [x] Luluskan direct-DFT dan round-trip STFT/iSTFT pada CI (galat maksimum round-trip 3,87e-7).
 
 ## Tahap 3 — audio dan dua keluaran
 
@@ -55,10 +55,10 @@
 
 - [ ] Pastikan izin tertulis Kim Vocal 2, atribusi, dan bukti hak distribusi diarsipkan.
 - [x] Tambahkan workflow build PPK Kim Vocal 2; helper JNI lama masih dipakai untuk persiapan PCM dan perlu dipisahkan dari mesin Demucs.
-- [ ] Build DEX, native ARM64, dan paket PPK baru.
+- [ ] Selesaikan build DEX, native ARM64, dan paket PPK baru.
 - [ ] Uji instalasi, pemuatan, pemisahan nyata, pembatalan, dan aksesibilitas.
 - [ ] Rilis hanya setelah seluruh kriteria penerimaan lulus.
 
 ## Status saat ini
 
-Kontrak identitas Kim Vocal 2, checksum, dan smoke test tensor sudah disiapkan. Mesin lama diblokir. Pipeline DSP awal telah diintegrasikan ke Java, tetapi uji round-trip dan build PPK harus lulus sebelum paket boleh dipasang. Belum ada hasil uji pemisahan nyata atau uji perangkat.
+Kontrak identitas Kim Vocal 2, checksum, dan smoke test tensor sudah disiapkan. Mesin lama diblokir. Pipeline DSP awal, direct-DFT, round-trip, model ONNX CPU smoke inference, kompilasi Java/D8, dan sintaks Lua telah lulus CI. Build PPK ARM64 masih berlangsung. Belum ada hasil uji audio nyata atau uji perangkat.
