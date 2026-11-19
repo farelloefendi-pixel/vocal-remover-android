@@ -208,29 +208,40 @@ function M.unduhModel()
   if not MODEL_ENABLED or not MODEL_URL then
     return false, "Unduhan model dinonaktifkan oleh konfigurasi."
   end
-  local kls, pesan = M.siapkan()
-  if not kls then return false, pesan end
   if unduhAktif then return false, "Pengunduhan model sudah berjalan" end
-  local siap, status = M.modelSiap()
-  if siap then return true, status end
 
   statusUnduh = kerja .. "/" .. MODEL_STATUS
   unduhAktif = true
+  local awal = io.open(statusUnduh, "wb")
+  if awal then
+    awal:write("jalan|0|Menyiapkan mesin|Menyiapkan komponen untuk mengunduh model|" .. tostring(os.time() * 1000))
+    awal:close()
+  end
+
   threadUnduh = Thread(Runnable({
     run = function()
       pcall(function()
         luajava.bindClass("android.os.Process").setThreadPriority(10)
       end)
       local ok, hasil = pcall(function()
+        local kls, pesan = M.siapkan()
+        if not kls then return "GALAT|" .. tostring(pesan) end
+        local siap, status = M.modelSiap()
+        if siap then return "OK|Model sudah tersedia dan terverifikasi" end
         return M.panggil(kls, "unduhModel", 2, { MODEL_URL, statusUnduh })
       end)
       local hasilTeks = tostring(hasil or "")
-      local sedangDiunduh = string.find(hasilTeks, "Pengunduhan model lain masih berjalan", 1, true) ~= nil
-      if not ok or (not sedangDiunduh and string.sub(hasilTeks, 1, 2) ~= "OK"
-          and string.sub(hasilTeks, 1, 5) ~= "BATAL") then
+      if not ok or string.sub(hasilTeks, 1, 5) == "GALAT" then
         local f = io.open(statusUnduh, "wb")
         if f then
           f:write("galat|0|Unduhan model gagal|" .. hasilTeks .. "|" .. tostring(os.time() * 1000))
+          f:close()
+        end
+      elseif string.sub(hasilTeks, 1, 2) == "OK" then
+        local f = io.open(statusUnduh, "wb")
+        if f then
+          f:write("selesai|100|Model siap|" .. tostring(string.match(hasilTeks, "|(.*)") or hasilTeks)
+            .. "|" .. tostring(os.time() * 1000))
           f:close()
         end
       end
@@ -238,7 +249,7 @@ function M.unduhModel()
     end
   }))
   threadUnduh.start()
-  return true, "Pengunduhan model dimulai"
+  return true, "Persiapan dan pengunduhan model berjalan di latar belakang"
 end
 
 function M.batalUnduhModel()
