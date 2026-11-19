@@ -10,7 +10,8 @@ Proyek **ekstensi CSR/Jieshuo** untuk memisahkan audio musik secara offline di A
 - Hasil: vocals, drums, bass, other, guitar, dan piano.
 - Pemrosesan berjalan pada worker Java/C++, satu pekerjaan pada satu waktu.
 - Progres, pembatalan, pemulihan pekerjaan, dan pembersihan file sementara.
-- Model belum diaktifkan. Bobot HTDemucs 6-stem memiliki batas lisensi yang belum jelas untuk penggunaan umum.
+- Model belum diaktifkan. Bobot HTDemucs 6-stem memiliki konflik lisensi yang belum terselesaikan; penggunaan komersial tidak boleh diasumsikan diizinkan.
+- Karena produk direncanakan untuk dijual, seluruh bobot, model hasil konversi, dan dependensi harus melewati pemeriksaan hak komersial sebelum rilis.
 
 ## Perangkat sasaran
 
@@ -34,6 +35,10 @@ Build terbaru **berhasil** pada 19 November 2026. Artefak `vocal-remover-csr-dev
 ## Status model
 
 Mesin C++ HTDemucs yang ada belum menjadi jalur pemisahan aktif. Kandidat HTDemucs 6S ONNX (136 MB, enam stem) sedang dinilai, tetapi belum diintegrasikan atau diunduh karena pernyataan MIT pada ekspor belum cukup untuk memastikan hak bobot dasar. Integrasi ONNX memerlukan runtime dan pipeline inferensi yang berbeda. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan [perbandingan kandidat](docs/KEPUTUSAN_MODEL.md).
+
+## Standar mutu dan rilis komersial
+
+Target mutu mencakup penghapusan vokal sepanjang lagu dan enam stem yang sinkron. Pengujian harus mencakup pop, dangdut, rebab, suling, dan gamelan dengan audio yang hak pengujiannya jelas. Model 6-stem tidak otomatis menghasilkan penghapusan vokal terbaik; benchmark penerbit menunjukkan perbedaan mutu vokal antara model 6S dan model 4-stem. Rilis komersial ditahan sampai izin bobot dan hasil uji mutu/perangkat terverifikasi. Lihat [rencana mutu dan gerbang rilis](docs/KEPUTUSAN_MODEL.md).
 
 ## Batas validasi
 
