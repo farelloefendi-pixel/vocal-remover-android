@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - "bridge/java/DJLEngine.java"
+      - "bridge/java/MDXNetDSP.java"
       - "bridge/lua/DJLBridge.lua"
       - "bridge/test/**"
       - "main.lua"
@@ -76,6 +77,7 @@ jobs:
               right_spec.real[:, :3072].T,
               right_spec.imag[:, :3072].T,
           ], axis=0)[None].astype(np.float32)
+          tensor[:, :, :3, :] = 0.0
           assert tensor.shape == tuple(expected), tensor.shape
           output = session.run(["output"], {"input": tensor})[0]
           assert output.shape == tuple(expected), output.shape
