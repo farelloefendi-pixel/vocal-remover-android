@@ -27,9 +27,9 @@ Pola pemuatan DEX, pemilihan pustaka berdasarkan arsitektur, pemisahan pekerjaan
 
 - Sumber Java DEX: `bridge/java/DJLEngine.java`.
 - Kontrak Lua–Java mengikuti `muat`, `mulai`, `batal`, dan `hidup` pada PPK referensi.
-- Workflow GitHub Actions disiapkan untuk membangun DEX dan pustaka JNI ARM64: [Build CSR native engine](.github/workflows/build-engine.yml).
+- Workflow GitHub Actions berhasil membangun DEX dan pustaka JNI ARM64. [Lihat hasil build dan artefak](https://github.com/farelloefendi-pixel/vocal-remover-android/actions/runs/44524494836).
 - Model terpisah dan tidak dimasukkan ke repositori: `5c90dfd2.safetensors` (checksum diverifikasi oleh bridge saat mulai bekerja).
-- Build dan pengujian perangkat masih menunggu hasil CI; kode bridge belum boleh dianggap siap dipasang.
+- Build CI berhasil. Binary belum diuji di perangkat dan belum menjadi ekstensi PPK siap pasang.
 
 ## Dokumen proyek
 
