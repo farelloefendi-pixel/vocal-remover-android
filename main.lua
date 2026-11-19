@@ -500,10 +500,13 @@ local function menuStatus()
   local siap, model = Bridge.modelSiap()
   local teks = tostring(info) .. "\n\nStatus model: "
     .. (siap and "siap" or tostring(model))
-    .. "\n\nPipeline Kim Vocal 2 sudah diintegrasikan. Model ONNX perlu tersedia dan lulus verifikasi checksum sebelum pemisahan dijalankan."
-  dialogPesan("Status mesin dan lisensi model", teks, {
-    { "Kembali", function() menuUtama() end }
-  }, function() menuUtama() end)
+    .. "\n\nModel Kim Vocal 2 harus lulus verifikasi SHA-256 sebelum pemisahan. Setelah terunduh, pemrosesan berjalan offline."
+  local tombol = {}
+  if not siap then
+    tombol[#tombol + 1] = { "Unduh model Kim Vocal 2", function() mulaiUnduhModel(nil) end }
+  end
+  tombol[#tombol + 1] = { "Kembali", function() menuUtama() end }
+  dialogPesan("Status mesin dan model", teks, tombol, function() menuUtama() end)
 end
 
 menuUtama = function()
