@@ -68,14 +68,9 @@ Native methods mengikuti tabel registrasi upstream:
 7. JSON hasil berisi path enam WAV.
 8. File PCM sementara dibersihkan pada akhir proses.
 
-## Model
+## Model dan lisensi
 
-- Nama: `5c90dfd2.safetensors`
-- Model: Demucs v4.1.0 HTDemucs 6-stem
-- URL pinned: `https://huggingface.co/adefossez/HTDemucs-6s/resolve/3c5ee475be622df764938de97e4281a7b07ffa58/5c90dfd2.safetensors`
-- SHA-256: `d2a1745f0744721f6b8ca5bf469b67c651ea5ed1b52998cab033b2158609d411`
-
-Model tidak disimpan di Git dan tidak dimasukkan ke PPK. Java mengunduh ke file sementara, memverifikasi checksum, lalu memindahkan file ke lokasi final. Cache verifikasi menggunakan path, ukuran, dan waktu modifikasi agar file 55 MB tidak di-hash ulang setiap kali UI memeriksa status.
+Bridge pernah disiapkan untuk model `5c90dfd2.safetensors`, tetapi adapter Lua kini mengunci `MODEL_ENABLED=false`. Pengunduhan, pemasangan, dan pemakaian HTDemucs tidak diaktifkan sampai dasar lisensi bobot sesuai tujuan penggunaan dipastikan. Rincian bukti dan alternatif ada di `docs/LISENSI_MODEL.md`.
 
 ## Status pekerjaan
 
