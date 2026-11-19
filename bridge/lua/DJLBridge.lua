@@ -142,7 +142,9 @@ function M.siapkan()
   pcall(function() File(folder .. "/odex").mkdirs() end)
   local dexTujuan = folder .. "/DJLEngine_" .. stempel(dex) .. ".dex"
   local soTujuan = folder .. "/libdjl_" .. stempel(so) .. ".so"
-  local ortTujuan = folder .. "/libonnxruntime.so"
+  local ortFolder = folder .. "/ort_" .. stempel(ort)
+  pcall(function() File(ortFolder).mkdirs() end)
+  local ortTujuan = ortFolder .. "/libonnxruntime.so"
 
   if not berkas(dexTujuan) and not salin(dex, dexTujuan) then
     return nil, "Gagal menyalin DJLEngine.dex ke cache internal"
@@ -156,7 +158,7 @@ function M.siapkan()
 
   local ok, hasil = pcall(function()
     local pemuat = luajava.bindClass("dalvik.system.DexClassLoader")(
-      dexTujuan, folder .. "/odex", folder, ctx.getClassLoader())
+      dexTujuan, folder .. "/odex", ortFolder, ctx.getClassLoader())
     return pemuat.loadClass("DJLEngine")
   end)
   if not ok or hasil == nil then
