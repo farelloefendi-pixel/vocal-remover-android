@@ -1,6 +1,27 @@
 # Java DEX bridge
 
-Direktori ini berisi sumber kelas Java penghubung yang ditujukan untuk ekstensi CSR/Jieshuo. Ini bukan APK dan tidak membuat aplikasi Android mandiri.
+Direktori ini berisi kelas Java DEX dan adapter Lua untuk ekstensi CSR/Jieshuo. Ini bukan APK dan tidak membuat aplikasi Android mandiri.
+
+## Adapter Lua
+
+File `lua/DJLBridge.lua` mengikuti pola `MD` pada `main.lua` PPK referensi: pencarian `DJLEngine.dex` dan SO berdasarkan folder plugin, penyalinan ke cache, pemuatan melalui `DexClassLoader`, pemanggilan metode statis lewat refleksi, serta status pekerjaan berbasis file. Adapter menambahkan pengunduhan model streaming dengan progres, status pekerjaan, pembatalan, pembacaan enam hasil, dan penghapusan hasil.
+
+Inisialisasi dari `main.lua`:
+
+```lua
+local Bridge = require "bridge.lua.DJLBridge"
+Bridge.mulai(ctx, DJL.base)
+local kelas, pesan = Bridge.siapkan()
+```
+
+Jika model belum tersedia, mulai unduhan pada worker dan pantau `Bridge.statusModel()` dari handler UI:
+
+```lua
+Bridge.unduhModel()
+-- polling berkala: Bridge.statusModel()
+```
+
+Setelah model siap, `Bridge.mulaiPemisahan(pathAudio)` mengembalikan ID pekerjaan. Pantau `Bridge.status(id)`, batalkan dengan `Bridge.batal(id)`, dan baca enam path hasil melalui `Bridge.ambilHasil(id)`.
 
 ## Kontrak Lua yang mengikuti referensi
 
@@ -33,7 +54,7 @@ Signature dan nama ini harus dipertahankan bersama dengan tabel registrasi nativ
 1. Lua mencari DEX dan SO berdasarkan ABI, lalu menyalinnya ke direktori privat.
 2. Lua memuat kelas `DJLEngine` dengan `DexClassLoader`.
 3. Lua memanggil `muat(soPath)`; metode tersebut memanggil `System.load(absolutePath)`. JNI_OnLoad mendaftarkan native method pada kelas DEX yang sama.
-4. Lua memanggil `pasangModel(modelSourcePath)`; model disalin secara streaming ke folder privat dan checksum SHA-256 diverifikasi.
+4. Jika model belum terpasang, adapter Lua menjalankan `unduhModel(url, statusPath)` pada worker Java. Data diunduh secara streaming ke folder privat, progres ditulis ke file status, dan checksum SHA-256 diverifikasi. `pasangModel(modelSourcePath)` juga tersedia untuk model lokal.
 5. Lua memanggil `mulai(audioPath, workDir, jobId)`. Metode ini memulai satu Java worker thread.
 6. Worker mendekode audio melalui MediaExtractor/MediaCodec menjadi file raw interleaved float32 secara bertahap.
 7. Worker memanggil native prepare dan separation; progres ditulis ke file status.
