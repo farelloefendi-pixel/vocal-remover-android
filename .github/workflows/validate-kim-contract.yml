@@ -38,6 +38,29 @@ jobs:
           unzip -q build/ort/onnxruntime.aar -d build/ort/unpacked
           test -s build/ort/unpacked/classes.jar
 
+      - name: Validate pinned Kim Vocal 2 ONNX model
+        run: |
+          curl --fail --location --retry 3 \
+            https://huggingface.co/aaatmy/uvr-mdx-net-onnx/resolve/main/Kim_Vocal_2.onnx \
+            --output build/Kim_Vocal_2.onnx
+          echo "ce74ef3b6a6024ce44211a07be9cf8bc6d87728cc852a68ab34eb8e58cde9c8b  build/Kim_Vocal_2.onnx" | sha256sum -c -
+          python -m pip install --quiet numpy onnxruntime
+          python - <<'PY'
+          import numpy as np
+          import onnxruntime as ort
+          path = "build/Kim_Vocal_2.onnx"
+          session = ort.InferenceSession(path, providers=["CPUExecutionProvider"])
+          assert [item.name for item in session.get_inputs()] == ["input"]
+          assert [item.name for item in session.get_outputs()] == ["output"]
+          expected = [1, 4, 3072, 256]
+          assert session.get_inputs()[0].shape == expected, session.get_inputs()[0].shape
+          assert session.get_outputs()[0].shape == expected, session.get_outputs()[0].shape
+          output = session.run(["output"], {"input": np.zeros(expected, dtype=np.float32)})[0]
+          assert output.shape == tuple(expected), output.shape
+          assert np.isfinite(output).all()
+          print("Kim Vocal 2 ONNX inference OK:", output.shape)
+          PY
+
       - name: Compile Java bridge
         run: |
           javac -source 8 -target 8 \
