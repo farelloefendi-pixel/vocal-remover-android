@@ -4,6 +4,8 @@ import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.system.Os;
 import ai.onnxruntime.OrtEnvironment;
+import ai.onnxruntime.OrtSession;
+import ai.onnxruntime.OnnxTensor;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -14,6 +16,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -264,6 +267,59 @@ public final class DJLEngine {
         if (!libraryLoaded) return "Mesin native belum dimuat";
         if (ortEnvironment == null) return "ONNX Runtime belum siap";
         return "ONNX Runtime Android berhasil dimuat. Mesin C++ lama masih prototipe; inferensi ONNX belum diaktifkan.";
+    }
+
+    public static synchronized String ujiModelEnamStem(String path) {
+        if (ortEnvironment == null) return "GALAT|ONNX Runtime belum dimuat";
+        if (path == null || path.length() == 0 || !new File(path).isFile()) {
+            return "GALAT|Berkas model ONNX tidak ditemukan";
+        }
+        try (OrtSession.SessionOptions options = new OrtSession.SessionOptions()) {
+            options.setIntraOpNumThreads(2);
+            options.setInterOpNumThreads(1);
+            options.setMemoryPatternOptimization(true);
+            try (OrtSession session = ortEnvironment.createSession(path, options)) {
+                if (!session.getInputNames().contains("mix")) {
+                    return "GALAT|Input model bukan bernama mix";
+                }
+                if (!session.getOutputNames().contains("stems")) {
+                    return "GALAT|Output model bukan bernama stems";
+                }
+                int samples = 343980;
+                int values = samples * 2;
+                ByteBuffer memory = ByteBuffer.allocateDirect(values * 4)
+                        .order(ByteOrder.nativeOrder());
+                FloatBuffer inputData = memory.asFloatBuffer();
+                for (int i = 0; i < values; i++) inputData.put(0f);
+                inputData.flip();
+                long[] shape = new long[] { 1, 2, samples };
+                try (OnnxTensor input = OnnxTensor.createTensor(
+                            ortEnvironment, inputData, shape)) {
+                    Map<String, OnnxTensor> feeds = new HashMap<>();
+                    feeds.put("mix", input);
+                    try (OrtSession.Result result = session.run(feeds)) {
+                        OnnxTensor outputTensor = (OnnxTensor) result.get("stems");
+                        if (outputTensor == null) {
+                            return "GALAT|Model tidak mengembalikan tensor stems";
+                        }
+                        FloatBuffer outputData = outputTensor.getFloatBuffer();
+                        int expected = 6 * 2 * samples;
+                        if (outputData == null || outputData.remaining() != expected) {
+                            return "GALAT|Dimensi output model tidak sesuai enam stem";
+                        }
+                        for (int i = 0; i < expected; i++) {
+                            float value = outputData.get(i);
+                            if (Float.isNaN(value) || Float.isInfinite(value)) {
+                                return "GALAT|Output model mengandung nilai tidak valid";
+                            }
+                        }
+                        return "OK|Inferensi uji satu segmen berhasil; enam stem dan seluruh nilai valid";
+                    }
+                }
+            }
+        } catch (Throwable error) {
+            return "GALAT|" + message(error);
+        }
     }
 
     /** Matches the three-String asynchronous entry point called by MD.mulai(). */
