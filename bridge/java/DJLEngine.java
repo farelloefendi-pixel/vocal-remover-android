@@ -815,6 +815,7 @@ public final class DJLEngine {
                     java.util.Arrays.fill(accumulatedEnvelope, remain, MDXNetDSP.CHUNK, 0f);
                 }
 
+                heartbeat.close();
                 int percent = 30 + (int) ((chunk + 1L) * 70L / chunks);
                 writeStatus(status, "jalan", percent, "Memisahkan audio",
                         "Segmen " + currentChunk + " dari " + chunks + " selesai");
