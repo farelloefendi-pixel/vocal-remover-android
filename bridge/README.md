@@ -5,10 +5,10 @@ Folder ini berisi sumber jembatan untuk ekstensi CSR/Jieshuo. Ini bukan APK dan 
 ## Referensi integrasi
 
 Adapter `lua/DJLBridge.lua` mengikuti pola fungsi `MD` pada PPK referensi:
-- mencari `DJLEngine.dex` dan pustaka SO sesuai ABI di folder plugin;
-- menyalin DEX dan SO ke cache privat;
+- mencari `DJLEngine.dex`, library mesin, serta dua library ONNX Runtime ARM64 di folder plugin;
+- menyalin DEX dan seluruh library native ke cache privat;
 - memuat DEX menggunakan `DexClassLoader`;
-- memuat SO menggunakan `System.load(pathAbsolut)`;
+- menetapkan path eksplisit `libonnxruntime.so` dan `libonnxruntime4j_jni.so` sebelum inisialisasi ORT;
 - memanggil metode statis melalui `getDeclaredMethod` dan `invoke`;
 - membaca status pekerjaan dari file teks;
 - menyimpan ID tugas aktif agar dapat dipulihkan saat ekstensi dibuka kembali.
@@ -25,7 +25,7 @@ local kelas, pesan = Bridge.siapkan()
 
 | Metode | Fungsi |
 |---|---|
-| `muat(String soPath)` | Memuat pustaka native dan menyiapkan path model |
+| `muat(String soPath, String ortDirectory)` | Memuat mesin native lama dan menginisialisasi ONNX Runtime melalui dua library native |
 | `lokasiModel()` | Mengembalikan lokasi privat model |
 | `modelSiap()` | Memeriksa keberadaan dan checksum model |
 | `unduhModel(String url, String statusPath)` | Mengunduh model secara streaming pada worker |
@@ -34,7 +34,8 @@ local kelas, pesan = Bridge.siapkan()
 | `mulai(String audioPath, String workDir, String jobId)` | Memulai satu worker pemisahan |
 | `batal(String workDir, String jobId)` | Membuat marker pembatalan dan meminta cancel native |
 | `hidup(String jobId)` | Memeriksa worker |
-| `infoMesin()` | Informasi konfigurasi komputasi |
+| `infoMesin()` | Informasi konfigurasi runtime |
+| `ujiModelEnamStem(String path)` | Membuka model ONNX, memeriksa nama dan bentuk tensor, lalu menjalankan inferensi uji satu segmen |
 
 Empat metode inti `muat/mulai/batal/hidup` mempertahankan kontrak PPK referensi. Metode tambahan mengelola model dan informasi mesin.
 
@@ -59,14 +60,11 @@ Native methods mengikuti tabel registrasi upstream:
 
 ## Alur audio
 
-1. Java memuat model dan mendekode audio dengan MediaExtractor/MediaCodec.
+1. Java mendekode audio dengan MediaExtractor/MediaCodec.
 2. Decoder menulis PCM float32 interleaved ke file sementara secara bertahap.
-3. Native prepare mengubah audio menjadi stereo float32 44,1 kHz.
-4. Native separation memproses satu segmen pada satu waktu.
-5. Vulkan dicoba; jika tidak tersedia atau self-test gagal, CPU digunakan.
-6. Enam WAV ditulis pada direktori hasil.
-7. JSON hasil berisi path enam WAV.
-8. File PCM sementara dibersihkan pada akhir proses.
+3. Jalur Demucs C++ lama masih prototipe dan tidak digunakan untuk kandidat ONNX.
+4. Jalur ONNX baru memiliki smoke test satu segmen; inferensi streaming seluruh lagu dan writer enam WAV belum dibuat.
+5. Model masih dinonaktifkan sampai hak bobot jelas.
 
 ## Model dan lisensi
 
