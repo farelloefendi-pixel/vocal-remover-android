@@ -70,7 +70,7 @@ public final class DJLEngine {
             if (parent == null) {
                 return "GALAT|Folder mesin tidak ditemukan";
             }
-            modelPath = new File(parent, "htdemucs_6s_fp16weights.onnx").getAbsolutePath();
+            modelPath = new File(parent, "Kim_Vocal_2.onnx").getAbsolutePath();
             if (ortDirectory == null || ortDirectory.length() == 0) {
                 return "GALAT|Folder pustaka ONNX Runtime kosong";
             }
@@ -256,67 +256,62 @@ public final class DJLEngine {
     public static String infoMesin() {
         if (!libraryLoaded) return "Mesin native belum dimuat";
         if (ortEnvironment == null) return "ONNX Runtime belum siap";
-        return "ONNX Runtime Android siap. Pemisahan memakai inferensi ONNX streaming; model tetap menunggu izin aktivasi.";
+        return "ONNX Runtime Android siap. Kontrak Kim Vocal 2 telah ditetapkan; pemrosesan audio lengkap belum diaktifkan.";
     }
 
-    public static synchronized String ujiModelEnamStem(String path) {
+    public static synchronized String ujiModelKimVocal2(String path) {
         if (ortEnvironment == null) return "GALAT|ONNX Runtime belum dimuat";
         if (path == null || path.length() == 0 || !new File(path).isFile()) {
-            return "GALAT|Berkas model ONNX tidak ditemukan";
+            return "GALAT|Berkas Kim Vocal 2 ONNX tidak ditemukan";
         }
         try (OrtSession.SessionOptions options = new OrtSession.SessionOptions()) {
             options.setIntraOpNumThreads(2);
             options.setInterOpNumThreads(1);
             options.setMemoryPatternOptimization(true);
             try (OrtSession session = ortEnvironment.createSession(path, options)) {
-                if (!session.getInputNames().contains("mix")) {
-                    return "GALAT|Input model bukan bernama mix";
+                if (!session.getInputNames().contains("input")) {
+                    return "GALAT|Input model bukan bernama input";
                 }
-                if (!session.getOutputNames().contains("stems")) {
-                    return "GALAT|Output model bukan bernama stems";
+                if (!session.getOutputNames().contains("output")) {
+                    return "GALAT|Output model bukan bernama output";
                 }
-                TensorInfo inputInfo = (TensorInfo) session.getInputInfo().get("mix").getInfo();
-                TensorInfo outputInfo = (TensorInfo) session.getOutputInfo().get("stems").getInfo();
+                TensorInfo inputInfo = (TensorInfo) session.getInputInfo().get("input").getInfo();
+                TensorInfo outputInfo = (TensorInfo) session.getOutputInfo().get("output").getInfo();
                 long[] inputShape = inputInfo.getShape();
                 long[] outputShape = outputInfo.getShape();
-                if (inputShape.length != 3 || inputShape[0] != 1
-                        || inputShape[1] != 2 || inputShape[2] != 343980) {
-                    return "GALAT|Bentuk input model tidak sesuai kontrak 6-stem";
+                long[] expectedShape = new long[] { 1, 4, 3072, 256 };
+                if (!java.util.Arrays.equals(inputShape, expectedShape)) {
+                    return "GALAT|Bentuk input Kim Vocal 2 tidak sesuai kontrak [1,4,3072,256]";
                 }
-                if (outputShape.length != 4 || outputShape[0] != 1
-                        || outputShape[1] != 6 || outputShape[2] != 2
-                        || outputShape[3] != 343980) {
-                    return "GALAT|Bentuk output model tidak sesuai kontrak 6-stem";
+                if (!java.util.Arrays.equals(outputShape, expectedShape)) {
+                    return "GALAT|Bentuk output Kim Vocal 2 tidak sesuai kontrak [1,4,3072,256]";
                 }
-                int samples = 343980;
-                int values = samples * 2;
+                int values = 4 * 3072 * 256;
                 ByteBuffer memory = ByteBuffer.allocateDirect(values * 4)
                         .order(ByteOrder.nativeOrder());
                 FloatBuffer inputData = memory.asFloatBuffer();
                 for (int i = 0; i < values; i++) inputData.put(0f);
                 inputData.flip();
-                long[] shape = new long[] { 1, 2, samples };
                 try (OnnxTensor input = OnnxTensor.createTensor(
-                            ortEnvironment, inputData, shape)) {
+                            ortEnvironment, inputData, expectedShape)) {
                     Map<String, OnnxTensor> feeds = new HashMap<>();
-                    feeds.put("mix", input);
+                    feeds.put("input", input);
                     try (OrtSession.Result result = session.run(feeds)) {
-                        OnnxTensor outputTensor = (OnnxTensor) result.get("stems").orElse(null);
+                        OnnxTensor outputTensor = (OnnxTensor) result.get("output").orElse(null);
                         if (outputTensor == null) {
-                            return "GALAT|Model tidak mengembalikan tensor stems";
+                            return "GALAT|Model tidak mengembalikan tensor output";
                         }
                         FloatBuffer outputData = outputTensor.getFloatBuffer();
-                        int expected = 6 * 2 * samples;
-                        if (outputData == null || outputData.remaining() != expected) {
-                            return "GALAT|Dimensi output model tidak sesuai enam stem";
+                        if (outputData == null || outputData.remaining() != values) {
+                            return "GALAT|Jumlah nilai output Kim Vocal 2 tidak sesuai";
                         }
-                        for (int i = 0; i < expected; i++) {
+                        for (int i = 0; i < values; i++) {
                             float value = outputData.get(i);
                             if (Float.isNaN(value) || Float.isInfinite(value)) {
-                                return "GALAT|Output model mengandung nilai tidak valid";
+                                return "GALAT|Output Kim Vocal 2 mengandung nilai tidak valid";
                             }
                         }
-                        return "OK|Inferensi uji satu segmen berhasil; enam stem dan seluruh nilai valid";
+                        return "OK|Inferensi uji satu segmen Kim Vocal 2 berhasil; seluruh nilai output valid";
                     }
                 }
             }
@@ -325,7 +320,6 @@ public final class DJLEngine {
         }
     }
 
-    
     public static String mulai(final String audioPath, final String workDir, final String id) {
         if (!libraryLoaded) {
             return "GALAT|Mesin native belum dimuat";
@@ -335,7 +329,7 @@ public final class DJLEngine {
             return "GALAT|Parameter pekerjaan tidak lengkap";
         }
         if (modelPath == null || !new File(modelPath).isFile()) {
-            return "GALAT|Model ONNX enam stem belum ditemukan di folder mesin";
+            return "GALAT|Model Kim Vocal 2 ONNX belum ditemukan di folder mesin";
         }
         if (DOWNLOADING.get()) {
             return "GALAT|Model sedang diunduh";
@@ -414,7 +408,7 @@ public final class DJLEngine {
             if (!root.exists() && !root.mkdirs()) {
                 throw new IOException("Folder kerja tidak bisa dibuat");
             }
-            writeStatus(status, "jalan", 0, "Memeriksa model", "Memverifikasi model ONNX enam stem");
+            writeStatus(status, "jalan", 0, "Memeriksa model", "Memverifikasi model ONNX Kim Vocal 2");
             checkCancelled(cancel);
             verifyModel(modelPath);
 
@@ -1018,7 +1012,7 @@ public final class DJLEngine {
             verifiedModelPath = null;
             verifiedModelLength = -1;
             verifiedModelModified = -1;
-            throw new IOException("Checksum model ONNX tidak cocok. Unduh ulang model enam stem.");
+            throw new IOException("Checksum Kim Vocal 2 tidak cocok. Unduh ulang model.");
         }
         verifiedModelPath = path;
         verifiedModelLength = length;
