@@ -68,6 +68,12 @@ jobs:
           test -s dist/classes.dex
           mv dist/classes.dex dist/DJLEngine.dex
 
+      - name: Check Lua bridge syntax
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.4
+          luac5.4 -p bridge/lua/DJLBridge.lua
+
       - name: Verify outputs
         run: |
           file dist/libdjl64.so dist/DJLEngine.dex
