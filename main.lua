@@ -301,11 +301,12 @@ statusDialogModel = function(pathLagu)
     if pathLagu then mulaiPemisahan(pathLagu) else menuUtama() end
     return
   end
-  dialogPesan("Mesin Kim Vocal 2 belum siap",
-    "Model yang dipilih adalah Kim Vocal 2 MDX-Net. Mesin pemrosesan ONNX dan STFT/iSTFT khusus model ini masih dalam tahap implementasi dan belum boleh digunakan untuk pemisahan audio.",
+  dialogPesan("Model Kim Vocal 2 belum tersedia",
+    "Untuk pemisahan offline, ekstensi memerlukan model Kim Vocal 2 ONNX sekitar 67 MB. Unduh model satu kali dengan koneksi internet. Berkas akan diperiksa checksum SHA-256 sebelum digunakan. Pesan: "
+      .. tostring(pesan),
     {
-      { "Kembali ke menu", function() menuUtama() end },
-      { "Pilih audio lain", function() pilihAudio() end }
+      { "Unduh model", function() mulaiUnduhModel(pathLagu) end },
+      { "Kembali ke menu", function() menuUtama() end }
     }, function() menuUtama() end)
 end
 
@@ -379,7 +380,7 @@ end
 pantau = function(id, path)
   pantauId = id
   local d = dialogBaru("Memisahkan audio")
-  d.setMessage("Memulai mesin Demucs...")
+  d.setMessage("Memulai mesin Kim Vocal 2...")
   d.setCancelable(false)
   d.setButton("Batalkan", function()
     Bridge.batal(id)
@@ -499,7 +500,7 @@ local function menuStatus()
   local siap, model = Bridge.modelSiap()
   local teks = tostring(info) .. "\n\nStatus model: "
     .. (siap and "siap" or tostring(model))
-    .. "\n\nMesin Kim Vocal 2 belum diaktifkan karena implementasi inferensi dan pemrosesan audionya belum selesai."
+    .. "\n\nPipeline Kim Vocal 2 sudah diintegrasikan. Model ONNX perlu tersedia dan lulus verifikasi checksum sebelum pemisahan dijalankan."
   dialogPesan("Status mesin dan lisensi model", teks, {
     { "Kembali", function() menuUtama() end }
   }, function() menuUtama() end)
@@ -527,7 +528,7 @@ menuUtama = function()
       menuStatus()
     elseif i == 4 then
       dialogPesan("Tentang Vocal Remover CSR",
-        "Ekstensi CSR untuk pemisahan audio offline menggunakan Kim Vocal 2 MDX-Net. Hasil yang direncanakan hanya vokal dan instrumental. Mesin inferensi ONNX dan pemrosesan STFT/iSTFT masih dikembangkan. Proses dirancang berjalan di worker agar UI dan pembaca layar tetap responsif.",
+        "Ekstensi CSR untuk pemisahan audio offline menggunakan Kim Vocal 2 MDX-Net ONNX. Hasil hanya vocals.wav dan instrumental.wav. Model diunduh satu kali, diverifikasi, lalu diproses offline. Proses berjalan di worker agar UI dan pembaca layar tetap responsif.",
         { { "Kembali", function() menuUtama() end } }, function() menuUtama() end)
     else
       tutupDialog()
