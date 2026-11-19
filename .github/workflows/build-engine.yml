@@ -113,7 +113,7 @@ jobs:
           Model file: Kim_Vocal_2.onnx
           Model SHA-256: ce74ef3b6a6024ce44211a07be9cf8bc6d87728cc852a68ab34eb8e58cde9c8b
           Outputs: vocals.wav, instrumental.wav
-          DSP: Java Bluestein FFT, MDX STFT/iSTFT, segment center trim
+          DSP: Java Bluestein FFT, MDX STFT/iSTFT, 25-percent Hann weighted overlap-add
           Status: integration candidate; device audio-quality and accessibility tests still required
           EOF
           (cd dist && zip -q -r Vocal_Remover_Kim_Vocal_2_CSR_TEST.ppk main.lua DJLEngine.dex libdjl64.so libonnxruntime.so libonnxruntime4j_jni.so bridge/lua/DJLBridge.lua licenses BUILD_INFO.txt SHA256SUMS.txt)
