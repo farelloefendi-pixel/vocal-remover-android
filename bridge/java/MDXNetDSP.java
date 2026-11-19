@@ -32,14 +32,27 @@ final class MDXNetDSP {
         return window;
     }
 
+    static final class Workspace {
+        final float[] inputReal = new float[N_FFT];
+        final float[] inputImag = new float[N_FFT];
+        final float[] synthReal = new float[N_FFT];
+        final float[] synthImag = new float[N_FFT];
+        final float[] overlap = new float[CHUNK + N_FFT];
+    }
+
     static void createInput(float[] left, float[] right, FloatBuffer target,
                             float[] window, BluesteinFFT fft) {
+        createInput(left, right, target, window, fft, new Workspace());
+    }
+
+    static void createInput(float[] left, float[] right, FloatBuffer target,
+                            float[] window, BluesteinFFT fft, Workspace workspace) {
         if (left.length != CHUNK || right.length != CHUNK
-                || target.capacity() < TENSOR_SIZE) {
+                || target.capacity() < TENSOR_SIZE || workspace == null) {
             throw new IllegalArgumentException("Ukuran buffer STFT tidak sesuai");
         }
-        float[] re = new float[N_FFT];
-        float[] im = new float[N_FFT];
+        float[] re = workspace.inputReal;
+        float[] im = workspace.inputImag;
         for (int channel = 0; channel < 2; channel++) {
             float[] source = channel == 0 ? left : right;
             int realPlane = channel * 2;
@@ -72,12 +85,21 @@ final class MDXNetDSP {
     static void synthesize(FloatBuffer spectrum, int channel, float[] destination,
                            float[] window, float[] envelope, BluesteinFFT fft,
                            FileCancellation cancellation) throws Exception {
-        if (destination.length < CHUNK || spectrum.remaining() < TENSOR_SIZE) {
+        synthesize(spectrum, channel, destination, window, envelope, fft,
+                cancellation, new Workspace());
+    }
+
+    static void synthesize(FloatBuffer spectrum, int channel, float[] destination,
+                           float[] window, float[] envelope, BluesteinFFT fft,
+                           FileCancellation cancellation, Workspace workspace) throws Exception {
+        if (destination.length < CHUNK || spectrum.remaining() < TENSOR_SIZE
+                || workspace == null) {
             throw new IllegalArgumentException("Ukuran buffer iSTFT tidak sesuai");
         }
-        float[] re = new float[N_FFT];
-        float[] im = new float[N_FFT];
-        float[] overlap = new float[CHUNK + N_FFT];
+        float[] re = workspace.synthReal;
+        float[] im = workspace.synthImag;
+        float[] overlap = workspace.overlap;
+        java.util.Arrays.fill(overlap, 0f);
         int realPlane = channel * 2;
         int imagPlane = realPlane + 1;
         for (int frame = 0; frame < DIM_T; frame++) {
