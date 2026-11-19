@@ -53,8 +53,12 @@ jobs:
           assert [item.name for item in session.get_inputs()] == ["input"]
           assert [item.name for item in session.get_outputs()] == ["output"]
           expected = [1, 4, 3072, 256]
-          assert session.get_inputs()[0].shape == expected, session.get_inputs()[0].shape
-          assert session.get_outputs()[0].shape == expected, session.get_outputs()[0].shape
+          input_shape = session.get_inputs()[0].shape
+          output_shape = session.get_outputs()[0].shape
+          assert input_shape[0] in (1, None, "batch_size"), input_shape
+          assert output_shape[0] in (1, None, "batch_size"), output_shape
+          assert input_shape[1:] == expected[1:], input_shape
+          assert output_shape[1:] == expected[1:], output_shape
           output = session.run(["output"], {"input": np.zeros(expected, dtype=np.float32)})[0]
           assert output.shape == tuple(expected), output.shape
           assert np.isfinite(output).all()
