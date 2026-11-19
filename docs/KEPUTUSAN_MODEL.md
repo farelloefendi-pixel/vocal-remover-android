@@ -40,3 +40,20 @@ Tidak ada jalur yang diaktifkan otomatis. Sampai keputusan dan pengujian selesai
 - [Audit provenance BS-RoFormer SW](https://github.com/openmirlab/bs-roformer-infer/issues/3)
 - [Model card BS-RoFormer SW 6-stem ONNX](https://huggingface.co/elicwhite/bs-roformer-sw-6stem-onnx)
 - [Panduan kebutuhan komputasi BS-RoFormer](https://tucktuckg00se.github.io/INTERSECT/stem-separation/)
+
+
+## Kandidat enam stem ONNX yang ditemukan pada pemeriksaan lanjutan
+
+Kandidat teknis paling dekat dengan target enam stem adalah [StemSplitio HTDemucs 6S ONNX](https://huggingface.co/StemSplitio/htdemucs-6s-onnx). Model card menyediakan varian FP16-weights sekitar 136 MB dan keluaran enam stem: drums, bass, other, vocals, guitar, piano. Dokumentasi penerbit menyebut input stereo 44,1 kHz dalam segmen sekitar 7,8 detik dan overlap-add saat menyusun kembali hasil.
+
+- [Model card dan berkas model](https://huggingface.co/StemSplitio/htdemucs-6s-onnx)
+- [Dokumentasi model dan benchmark penerbit](https://github.com/StemSplit/demucs-onnx/blob/main/docs/models.md)
+- [ONNX Runtime Android](https://onnxruntime.ai/docs/install/)
+- [NNAPI Execution Provider](https://onnxruntime.ai/docs/execution-providers/NNAPI-ExecutionProvider)
+
+Penerbit menyatakan ekspor ONNX mereka MIT. Namun, metadata MIT pada repositori hasil ekspor bukan bukti mandiri bahwa hak bobot dasar dan data pelatihannya sudah mendapat izin yang sesuai. Ada sumber independen yang juga menyebut status hak bobot Demucs masih belum terselesaikan. Karena itu kandidat ini **belum diaktifkan, belum diunduh otomatis, dan belum dimasukkan ke PPK**.
+
+Secara teknis, integrasi ONNX memerlukan perubahan nyata: menambahkan ONNX Runtime Android AAR dan pustaka ARM64, memuat model ONNX, membuat tensor input sesuai bentuk model, menjalankan inferensi per segmen, melakukan overlap-add, menulis enam WAV, serta menguji penggunaan memori dan waktu pada Redmi 13C. Mesin C++ Demucs yang ada tidak dapat menjalankan file ONNX hanya dengan mengganti nama model atau URL.
+
+Angka performa yang dipublikasikan penerbit berasal dari Apple M4 Pro, bukan Redmi 13C. Angka tersebut tidak boleh dipakai sebagai jaminan performa ponsel sasaran. NNAPI tersedia pada Android, tetapi dukungan operator dan perangkat keras tetap perlu diuji; CPU fallback harus dipertahankan.
+
