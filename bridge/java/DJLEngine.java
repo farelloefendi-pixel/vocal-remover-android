@@ -311,7 +311,7 @@ public final class DJLEngine {
                     Map<String, OnnxTensor> feeds = new HashMap<>();
                     feeds.put("mix", input);
                     try (OrtSession.Result result = session.run(feeds)) {
-                        OnnxTensor outputTensor = (OnnxTensor) result.get("stems");
+                        OnnxTensor outputTensor = (OnnxTensor) result.get("stems").orElse(null);
                         if (outputTensor == null) {
                             return "GALAT|Model tidak mengembalikan tensor stems";
                         }
@@ -675,7 +675,7 @@ public final class DJLEngine {
                     Map<String, OnnxTensor> feeds = new HashMap<>();
                     feeds.put("mix", tensor);
                     try (OrtSession.Result result = session.run(feeds, runOptions)) {
-                        OnnxTensor outputTensor = (OnnxTensor) result.get("stems");
+                        OnnxTensor outputTensor = (OnnxTensor) result.get("stems").orElse(null);
                         if (outputTensor == null
                                 || !sameShape(outputTensor.getInfo().getShape(),
                                         new long[] {1, 6, 2, ONNX_SAMPLES})) {
