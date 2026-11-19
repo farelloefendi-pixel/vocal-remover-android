@@ -321,6 +321,7 @@ public final class DJLEngine {
     }
 
     public static String mulai(final String audioPath, final String workDir, final String id) {
+        return "GALAT|Mesin pemisahan Kim Vocal 2 belum selesai. Mesin lama tidak boleh dijalankan dengan model ini.";
         if (!libraryLoaded) {
             return "GALAT|Mesin native belum dimuat";
         }
