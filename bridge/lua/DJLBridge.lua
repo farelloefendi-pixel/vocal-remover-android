@@ -353,6 +353,23 @@ function M.hapusHasil(id)
   return true
 end
 
+
+function M.simpanTerakhir(id, audioPath)
+  local f = io.open(kerja .. "/terakhir.txt", "wb")
+  if not f then return false end
+  f:write(table.concat({ id, audioPath or "" }, "\\t"))
+  f:close()
+  return true
+end
+
+function M.terakhir()
+  local isi = berkas(kerja .. "/terakhir.txt")
+  if not isi then return nil end
+  local id, path = string.match(isi, "^([^\\t]+)\\t([^\\n]*)")
+  if not id then return nil end
+  return { id = id, path = path }
+end
+
 function M.folderKerja()
   return kerja
 end
