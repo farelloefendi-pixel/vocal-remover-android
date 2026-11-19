@@ -51,7 +51,7 @@ jobs:
           grep -Fq "Kim_Vocal_2.onnx" bridge/java/DJLEngine.java
           grep -Fq "ce74ef3b6a6024ce44211a07be9cf8bc6d87728cc852a68ab34eb8e58cde9c8b" bridge/java/DJLEngine.java
           grep -Fq 'new long[] { 1, 4, 3072, 256 }' bridge/java/DJLEngine.java
-          grep -Fq "Kim Vocal 2 bukan" bridge/java/DJLEngine.java
+          grep -Fq "Model bukan Kim Vocal 2" bridge/java/DJLEngine.java
           grep -Fq "MDXNetDSP.createInput" bridge/java/DJLEngine.java
           grep -Fq "instrumental.wav" bridge/java/DJLEngine.java
           "$ANDROID_HOME/build-tools/35.0.0/d8" \
