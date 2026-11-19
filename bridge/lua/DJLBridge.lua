@@ -84,11 +84,12 @@ local function sumberMesin()
     if string.sub(dir, -1) ~= "/" then dir = dir .. "/" end
     local dex = berkas(dir .. "DJLEngine.dex")
     local so = berkas(dir .. namaSo)
-    if dex and so then
-      return dex, so, namaSo, calon
+    local ort = berkas(dir .. "libonnxruntime.so")
+    if dex and so and ort then
+      return dex, so, ort, namaSo, calon
     end
   end
-  return nil, nil, namaSo, calon
+  return nil, nil, nil, namaSo, calon
 end
 
 function M.panggil(kls, nama, jumlah, argumen)
@@ -122,18 +123,18 @@ end
 function M.siapkan()
   if not ctx then return nil, "Context CSR belum diinisialisasi" end
   local properties = System.getProperties()
-  local tersimpan = properties.get("vocalremover.kelas")
+  local tersimpan = properties.get("vocalremover.kelas.ort132")
   if tersimpan ~= nil then
     kelas = tersimpan
     return kelas
   end
 
-  local dex, so, namaSo, calon = sumberMesin()
+  local dex, so, ort, namaSo, calon = sumberMesin()
   if not dex then
     local daftar = {}
     for _, path in ipairs(calon or {}) do daftar[#daftar + 1] = path end
-    return nil, "Berkas mesin tidak ditemukan. Letakkan DJLEngine.dex dan "
-      .. namaSo .. " di folder ekstensi. Folder yang diperiksa: "
+    return nil, "Berkas mesin tidak lengkap. Letakkan DJLEngine.dex, "
+      .. namaSo .. ", dan libonnxruntime.so di folder ekstensi. Folder yang diperiksa: "
       .. table.concat(daftar, ", ")
   end
 
@@ -141,6 +142,7 @@ function M.siapkan()
   pcall(function() File(folder .. "/odex").mkdirs() end)
   local dexTujuan = folder .. "/DJLEngine_" .. stempel(dex) .. ".dex"
   local soTujuan = folder .. "/libdjl_" .. stempel(so) .. ".so"
+  local ortTujuan = folder .. "/libonnxruntime_" .. stempel(ort) .. ".so"
 
   if not berkas(dexTujuan) and not salin(dex, dexTujuan) then
     return nil, "Gagal menyalin DJLEngine.dex ke cache internal"
@@ -148,10 +150,13 @@ function M.siapkan()
   if not berkas(soTujuan) and not salin(so, soTujuan) then
     return nil, "Gagal menyalin " .. namaSo .. " ke cache internal"
   end
+  if not berkas(ortTujuan) and not salin(ort, ortTujuan) then
+    return nil, "Gagal menyalin libonnxruntime.so ke cache internal"
+  end
 
   local ok, hasil = pcall(function()
     local pemuat = luajava.bindClass("dalvik.system.DexClassLoader")(
-      dexTujuan, folder .. "/odex", nil, ctx.getClassLoader())
+      dexTujuan, folder .. "/odex", folder, ctx.getClassLoader())
     return pemuat.loadClass("DJLEngine")
   end)
   if not ok or hasil == nil then
