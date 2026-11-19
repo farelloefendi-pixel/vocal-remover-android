@@ -48,10 +48,11 @@ Paper resmi Spleeter di JOSS menyatakan bahwa source code dan model pretrained d
 
 ### Open-Unmix UMX-HQ 4-stem
 
-Bobot UMX-HQ dari Zenodo mempunyai kandidat dasar lisensi MIT dan empat keluaran: vocals, drums, bass, other. Kualitas dan kelayakan port Android C++/ONNX harus diuji. Tidak ada stem piano atau gitar tersendiri.
+Bobot UMX-HQ di Zenodo menyediakan empat target: vocals, drums, bass, other. Namun halaman record Zenodo yang diperiksa tidak menampilkan nilai lisensi yang tegas. Beberapa model card ONNX pihak ketiga menyebut MIT, tetapi itu belum sama dengan bukti pemberian lisensi primer dari pemilik bobot. Karena itu UMX-HQ masih kandidat yang perlu diverifikasi, bukan model yang sudah disetujui. Kualitas dan kelayakan port Android C++/ONNX juga harus diuji. Tidak ada stem piano atau gitar tersendiri.
 
 - [Record bobot UMX-HQ di Zenodo](https://zenodo.org/records/3370489)
 - [Open-Unmix model documentation](https://sigsep.github.io/open-unmix/)
+- [Contoh model card ONNX pihak ketiga yang menyebut MIT](https://huggingface.co/edgetools/umx-hq) (bukan bukti primer dari pemilik bobot)
 
 ## Keputusan yang masih diperlukan
 
