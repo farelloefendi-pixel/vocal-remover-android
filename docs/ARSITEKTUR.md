@@ -25,7 +25,7 @@ Jieshuo / CSR
   DJLEngine.dex
     decode audio Android
     resample stereo 44.1 kHz
-    STFT MDX / FFT 7680
+    STFT MDX / Bluestein FFT 7680
     susun tensor [1,4,3072,256]
     inferensi ONNX Runtime
     iSTFT, overlap-add, kompensasi
@@ -59,7 +59,7 @@ UI sudah diselaraskan dengan dua keluaran. Model masih dinonaktifkan di adapter 
 Nama file model, checksum, dan smoke test tensor telah diarahkan ke Kim Vocal 2. Fungsi mulai pemisahan sengaja mengembalikan pesan belum selesai agar kode lama tidak berjalan secara keliru.
 
 ### Native dan workflow
-Workflow masih mengambil dan membangun proyek Demucs Android lama. Langkah tersebut belum cocok dengan arsitektur Kim Vocal 2 dan harus diganti setelah FFT/DSP baru dipilih serta diimplementasikan. Jangan mengemas artefak workflow lama sebagai rilis.
+Workflow baru membangun paket PPK Kim Vocal 2 dan menyertakan helper JNI audio lama untuk tahap penyiapan PCM saja. Pemanggilan inferensi Demucs tidak digunakan. Helper JNI tersebut masih perlu diganti dengan implementasi penyiapan audio yang berdiri sendiri. Jangan mengemas artefak workflow lama sebagai rilis.
 
 ## Kinerja dan aksesibilitas
 
