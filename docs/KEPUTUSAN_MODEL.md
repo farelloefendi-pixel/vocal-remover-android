@@ -11,7 +11,7 @@ Tujuan awal proyek tetap enam stem: vocals, drums, bass, other, guitar, dan pian
 | HTDemucs 6S | 6: vocals, drums, bass, other, guitar, piano | sekitar 55 MB | Pemelihara Demucs menyatakan bobot pretrained tidak tercakup MIT dan hanya untuk tujuan ilmiah | Mesin C++ ARM64 sudah berhasil dibangun; runtime ponsel belum diuji |
 | BS-RoFormer SW | 6: vocals, drums, bass, other, guitar, piano | ONNX FP16 sekitar 336 MB | Tidak ada lisensi/provenance bobot yang dapat diverifikasi; metadata MIT pada ekspor tidak mencakup bobot asal secara otomatis | Risiko tinggi; dokumentasi desktop menyebut sekitar 6 GB RAM bebas dan sekitar 11 menit CPU untuk lagu 3 menit pada PC 12-core |
 | Spleeter 5-stem ONNX | 5: vocals, drums, bass, piano, other | total sekitar 98.3 MB untuk lima graph FP16 | Paper JOSS menyebut pretrained models MIT; README kini hanya menyebut kode MIT dan issue klarifikasi #959 belum dijawab | Kandidat paling ringan/realistis untuk prototipe Android; belum diuji pada perangkat |
-| Open-Unmix UMX-HQ | 4: vocals, drums, bass, other | bervariasi | Belum ditemukan pernyataan lisensi bobot primer yang tegas | Belum dipilih atau diuji |
+| Open-Unmix UMX-HQ | 4: vocals, drums, bass, other | sekitar 143.6 MB untuk empat bobot resmi | Ada petunjuk metadata Zenodo `mit-license` dari laporan pihak ketiga; perlu verifikasi API langsung dan arsip notice | Kandidat 4-stem, bukan pengganti target enam stem; belum diuji di ponsel |
 
 ## Keputusan teknis saat ini
 
@@ -35,6 +35,8 @@ Tidak ada jalur yang diaktifkan otomatis. Sampai keputusan dan pengujian selesai
 - [README resmi Spleeter](https://github.com/deezer/spleeter)
 - [Issue klarifikasi lisensi bobot Spleeter #959](https://github.com/deezer/spleeter/issues/959)
 - [Paket Spleeter 5-stem ONNX dan checksum](https://github.com/matthewbae/spleeter-onnx-models)
+- [Record UMX-HQ di Zenodo](https://zenodo.org/records/3370489)
+- [Laporan metadata API UMX-HQ](https://github.com/ContextualWisdomLab/bandscope/issues/1180) (petunjuk pihak ketiga, belum diverifikasi langsung)
 - [Audit provenance BS-RoFormer SW](https://github.com/openmirlab/bs-roformer-infer/issues/3)
 - [Model card BS-RoFormer SW 6-stem ONNX](https://huggingface.co/elicwhite/bs-roformer-sw-6stem-onnx)
 - [Panduan kebutuhan komputasi BS-RoFormer](https://tucktuckg00se.github.io/INTERSECT/stem-separation/)
