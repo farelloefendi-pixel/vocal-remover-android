@@ -431,11 +431,11 @@ function M.statusMesin()
   return true, tostring(pesan or "Mesin siap.") .. " " .. tostring(info)
 end
 
-function M.ujiModelEnamStem(path)
+function M.ujiModelKimVocal2(path)
   local kls, pesan = M.siapkan()
   if not kls then return false, pesan end
   local ok, hasil = pcall(function()
-    return M.panggil(kls, "ujiModelEnamStem", 1, { path })
+    return M.panggil(kls, "ujiModelKimVocal2", 1, { path })
   end)
   if not ok then return false, tostring(hasil) end
   return string.sub(hasil, 1, 2) == "OK", hasil
