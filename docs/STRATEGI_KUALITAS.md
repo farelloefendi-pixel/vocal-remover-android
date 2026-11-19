@@ -36,7 +36,7 @@ Kontrak segmen yang telah dicatat:
 - bagian tengah unik 253.440 sampel.
 Overlap dan normalisasi akhir wajib diverifikasi terhadap kode referensi yang cocok dengan Kim Vocal 2; jangan mengasumsikan parameter model lain.
 
-FFT 7680 bukan pangkat dua. Jangan memakai DFT kuadratik untuk lagu panjang. Gunakan FFT mixed-radix/Bluestein atau pustaka yang terbukti efisien, Android-compatible, dan lisensinya jelas.
+FFT 7680 bukan pangkat dua. Implementasi awal memakai Bluestein FFT berbasis radix-2 di Java agar ukuran transformasi 7680 dapat diproses tanpa DFT kuadratik. Akurasi dan kinerja Android belum tervalidasi.
 
 ## Pengujian audio
 
@@ -73,4 +73,4 @@ Ukuran file model tidak sama dengan kebutuhan RAM saat inferensi.
 
 ## Status kode saat ini
 
-Identitas model, checksum, dan smoke test bentuk tensor Java telah diperbarui. Pemanggilan pemisahan lama diblokir. Pipeline FFT/STFT/inferensi/iSTFT/overlap-add belum selesai, workflow masih membangun mesin Demucs lama, dan belum ada PPK Kim Vocal 2 yang siap dipasang. Model tidak boleh diaktifkan sampai implementasi dan pengujian lengkap.
+Identitas model, checksum, smoke test bentuk tensor, dan pipeline DSP Java awal telah diperbarui. Pemanggilan pemisahan lama diblokir. Uji round-trip DSP gagal pada fixture awal karena komponen frekuensi di atas batas 3072 bin; fixture telah diperbaiki dan pengujian CI baru sedang berjalan. Belum ada PPK yang tervalidasi pada perangkat. Model tidak boleh diaktifkan sampai implementasi dan pengujian lengkap.
