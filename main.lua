@@ -301,13 +301,11 @@ statusDialogModel = function(pathLagu)
     if pathLagu then mulaiPemisahan(pathLagu) else menuUtama() end
     return
   end
-  dialogPesan("Model Demucs belum terpasang",
-    "Model pemisahan enam stem belum tersedia. Unduhan pertama membutuhkan koneksi internet dan ruang penyimpanan sekitar 55 MB. Setelah selesai, pemisahan bisa dilakukan tanpa internet.",
+  dialogPesan("Mesin enam stem belum diaktifkan",
+    "Bobot HTDemucs 6-stem memiliki batas lisensi yang belum jelas untuk penggunaan umum. Karena itu, unduhan dan pemakaiannya sementara dinonaktifkan. Kode mesin tetap disimpan sebagai prototipe. Kita sedang menilai model alternatif dengan lisensi bobot yang lebih jelas.",
     {
-      { "Unduh model", function() mulaiUnduhModel(pathLagu) end },
-      { "Kembali", function()
-        if pathLagu then pilihAudio() else menuUtama() end
-      end }
+      { "Kembali ke menu", function() menuUtama() end },
+      { "Pilih audio lain", function() pilihAudio() end }
     }, function() menuUtama() end)
 end
 
@@ -499,16 +497,10 @@ end
 local function menuStatus()
   local ok, info = Bridge.statusMesin()
   local siap, model = Bridge.modelSiap()
-  local teks = tostring(info) .. "\n\nModel: " .. (siap and "siap" or tostring(model))
-  dialogPesan("Status mesin", teks, {
-    { "Unduh model", function()
-      if siap then
-        toast("Model sudah siap")
-        menuUtama()
-      else
-        mulaiUnduhModel(nil)
-      end
-    end },
+  local teks = tostring(info) .. "\n\nStatus model: "
+    .. (siap and "siap" or tostring(model))
+    .. "\n\nUnduhan HTDemucs saat ini dinonaktifkan sampai hak penggunaan bobot dipastikan."
+  dialogPesan("Status mesin dan lisensi model", teks, {
     { "Kembali", function() menuUtama() end }
   }, function() menuUtama() end)
 end
@@ -535,7 +527,7 @@ menuUtama = function()
       menuStatus()
     elseif i == 4 then
       dialogPesan("Tentang Vocal Remover CSR",
-        "Pemisahan audio offline menggunakan Demucs HTDemucs 6-stem. Hasil: vokal, drum, bass, instrumen lain, gitar, dan piano. Model harus diunduh sekali. Proses berat berjalan di worker Java/C++ dan dapat dibatalkan.",
+        "Prototipe ekstensi CSR untuk pemisahan audio offline. Mesin C++/Java dan antarmuka Lua sedang dikembangkan. Model HTDemucs 6-stem belum diaktifkan karena status lisensi bobot perlu dipastikan. Proses dirancang berjalan di worker agar UI dan pembaca layar tetap responsif.",
         { { "Kembali", function() menuUtama() end } }, function() menuUtama() end)
     else
       tutupDialog()
