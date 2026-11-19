@@ -8,6 +8,9 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
@@ -31,6 +34,8 @@ public final class DJLEngine {
 
     private static final Map<String, Thread> WORKERS = new HashMap<>();
     private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
+    private static final AtomicBoolean DOWNLOADING = new AtomicBoolean(false);
+    private static final AtomicBoolean CANCEL_DOWNLOAD = new AtomicBoolean(false);
     private static volatile boolean libraryLoaded;
     private static volatile String modelPath;
 
@@ -69,6 +74,121 @@ public final class DJLEngine {
         } catch (Throwable error) {
             return "GALAT|" + message(error);
         }
+    }
+
+    /** Absolute private path used for the model weights. */
+    public static String lokasiModel() {
+        return modelPath == null ? "" : modelPath;
+    }
+
+    /** Check an already installed model without copying or loading it. */
+    public static String modelSiap() {
+        if (modelPath == null || !new File(modelPath).isFile()) {
+            return "BELUM|Model belum diunduh";
+        }
+        try {
+            verifyModel(modelPath);
+            return "OK|Model siap dan checksum cocok";
+        } catch (Throwable error) {
+            return "GALAT|" + message(error);
+        }
+    }
+
+    /**
+     * Download the model on the caller's worker thread. Writes the same
+     * pipe-delimited progress format used by the separation worker.
+     */
+    public static String unduhModel(String url, String statusPath) {
+        if (!libraryLoaded || modelPath == null) {
+            return "GALAT|Mesin native belum dimuat";
+        }
+        if (RUNNING.get()) {
+            return "GALAT|Pemisahan audio sedang berjalan";
+        }
+        if (!DOWNLOADING.compareAndSet(false, true)) {
+            return "GALAT|Pengunduhan model lain masih berjalan";
+        }
+
+        CANCEL_DOWNLOAD.set(false);
+        File target = new File(modelPath);
+        File temporary = new File(modelPath + ".download");
+        HttpURLConnection connection = null;
+        try {
+            File parent = target.getParentFile();
+            if (parent != null && !parent.exists() && !parent.mkdirs()) {
+                throw new IOException("Folder model tidak bisa dibuat");
+            }
+            temporary.delete();
+            connection = (HttpURLConnection) new URL(url).openConnection();
+            connection.setInstanceFollowRedirects(true);
+            connection.setConnectTimeout(20000);
+            connection.setReadTimeout(30000);
+            connection.setRequestProperty("User-Agent", "VocalRemover-CSR/1.0");
+            connection.connect();
+            int code = connection.getResponseCode();
+            if (code < 200 || code >= 300) {
+                throw new IOException("Server model memberi HTTP " + code);
+            }
+            long expected = connection.getContentLengthLong();
+            long received = 0;
+            long lastWrite = 0;
+            try (InputStream input = connection.getInputStream();
+                 BufferedOutputStream output = new BufferedOutputStream(
+                         new FileOutputStream(temporary, false), 1024 * 1024)) {
+                byte[] buffer = new byte[1024 * 1024];
+                int count;
+                while ((count = input.read(buffer)) != -1) {
+                    if (CANCEL_DOWNLOAD.get()) {
+                        throw new CancellationException("Pengunduhan model dibatalkan");
+                    }
+                    output.write(buffer, 0, count);
+                    received += count;
+                    long now = System.currentTimeMillis();
+                    if (now - lastWrite >= 500) {
+                        int percent = expected > 0
+                                ? (int) Math.min(99, received * 100L / expected) : 0;
+                        String detail = expected > 0
+                                ? (received / 1048576L) + " dari " + (expected / 1048576L) + " MB"
+                                : (received / 1048576L) + " MB diterima";
+                        writeStatus(new File(statusPath), "jalan", percent,
+                                "Mengunduh model", detail);
+                        lastWrite = now;
+                    }
+                }
+                output.flush();
+            }
+            if (CANCEL_DOWNLOAD.get()) {
+                throw new CancellationException("Pengunduhan model dibatalkan");
+            }
+            writeStatus(new File(statusPath), "jalan", 99,
+                    "Memeriksa model", "Memverifikasi SHA-256");
+            verifyModel(temporary.getAbsolutePath());
+            Os.rename(temporary.getAbsolutePath(), target.getAbsolutePath());
+            writeStatus(new File(statusPath), "selesai", 100,
+                    "Model siap", "Model berhasil diunduh dan diverifikasi");
+            return "OK|Model berhasil diunduh dan diverifikasi";
+        } catch (CancellationException error) {
+            temporary.delete();
+            writeStatus(new File(statusPath), "batal", 0,
+                    "Pengunduhan dibatalkan", message(error));
+            return "BATAL|" + message(error);
+        } catch (Throwable error) {
+            temporary.delete();
+            writeStatus(new File(statusPath), "galat", 0,
+                    "Unduhan model gagal", message(error));
+            return "GALAT|" + message(error);
+        } finally {
+            if (connection != null) {
+                try { connection.disconnect(); } catch (Exception ignored) { }
+            }
+            DOWNLOADING.set(false);
+            CANCEL_DOWNLOAD.set(false);
+        }
+    }
+
+    public static String batalUnduhModel() {
+        CANCEL_DOWNLOAD.set(true);
+        return "OK";
     }
 
     /** Copy the separately downloaded model into the private engine folder without loading it into RAM. */
@@ -126,6 +246,9 @@ public final class DJLEngine {
         }
         if (modelPath == null || !new File(modelPath).isFile()) {
             return "GALAT|Model 5c90dfd2.safetensors belum ditemukan di folder mesin";
+        }
+        if (DOWNLOADING.get()) {
+            return "GALAT|Model sedang diunduh";
         }
         if (!RUNNING.compareAndSet(false, true)) {
             return "GALAT|Pekerjaan pemisahan lain masih berjalan";
