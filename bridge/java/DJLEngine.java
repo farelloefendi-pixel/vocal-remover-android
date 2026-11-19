@@ -326,7 +326,7 @@ public final class DJLEngine {
 
     public static String mulai(final String audioPath, final String workDir, final String id) {
         if (!kimPipelineReady()) {
-            return "GALAT|Mesin pemisahan Kim Vocal 2 belum selesai. Mesin lama tidak boleh dijalankan dengan model ini.";
+            return "GALAT|Pipeline Kim Vocal 2 dinonaktifkan oleh pengaman konfigurasi.";
         }
         if (!libraryLoaded) {
             return "GALAT|Mesin native belum dimuat";
