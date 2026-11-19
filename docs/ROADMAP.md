@@ -23,14 +23,14 @@
 
 ## Tahap 2 — DSP MDX-Net
 
-- [ ] Audit dan pilih implementasi FFT 7680 yang efisien, kompatibel Android, dan lisensinya jelas.
-- [ ] Implementasikan STFT periodic Hann, center=True, reflect padding, dan normalisasi yang sesuai referensi UVR/MDX.
-- [ ] Implementasikan pemetaan tensor empat bidang real/imaginary.
+- [x] Implementasikan Bluestein FFT 7680 berbasis radix-2 di Java; validasi numerik masih berjalan.
+- [x] Implementasikan STFT periodic Hann, center=True, reflect padding, dan normalisasi sesuai referensi UVR/MDX.
+- [x] Implementasikan pemetaan tensor empat bidang real/imaginary.
 - [ ] Terapkan penanganan bin awal sesuai referensi model.
-- [ ] Implementasikan inferensi ONNX satu segmen.
-- [ ] Implementasikan iSTFT dan normalisasi envelope.
-- [ ] Implementasikan trim, overlap-add, dan penanganan segmen terakhir tanpa kehilangan atau duplikasi sampel.
-- [ ] Validasi numerik STFT/iSTFT dan overlap terhadap implementasi referensi.
+- [x] Integrasikan inferensi ONNX satu segmen dengan validasi node dan bentuk tensor.
+- [x] Implementasikan iSTFT dan normalisasi envelope.
+- [x] Implementasikan center trim, padding batas, dan penyambungan segmen tanpa kehilangan atau duplikasi sampel.
+- [ ] Luluskan uji numerik round-trip STFT/iSTFT terhadap implementasi referensi.
 
 ## Tahap 3 — audio dan dua keluaran
 
@@ -54,11 +54,11 @@
 ## Tahap 5 — rilis
 
 - [ ] Pastikan izin tertulis Kim Vocal 2, atribusi, dan bukti hak distribusi diarsipkan.
-- [ ] Ganti seluruh langkah build Demucs lama dengan build mesin DSP Kim Vocal 2.
+- [x] Tambahkan workflow build PPK Kim Vocal 2; helper JNI lama masih dipakai untuk persiapan PCM dan perlu dipisahkan dari mesin Demucs.
 - [ ] Build DEX, native ARM64, dan paket PPK baru.
 - [ ] Uji instalasi, pemuatan, pemisahan nyata, pembatalan, dan aksesibilitas.
 - [ ] Rilis hanya setelah seluruh kriteria penerimaan lulus.
 
 ## Status saat ini
 
-Kontrak identitas Kim Vocal 2, checksum, dan smoke test tensor sudah disiapkan. Mesin lama diblokir. Pipeline DSP utama belum selesai. Belum ada PPK Kim Vocal 2 yang siap dipasang atau diuji sebagai produk.
+Kontrak identitas Kim Vocal 2, checksum, dan smoke test tensor sudah disiapkan. Mesin lama diblokir. Pipeline DSP awal telah diintegrasikan ke Java, tetapi uji round-trip dan build PPK harus lulus sebelum paket boleh dipasang. Belum ada hasil uji pemisahan nyata atau uji perangkat.
