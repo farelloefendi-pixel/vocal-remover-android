@@ -575,6 +575,10 @@ local function mulaiEkstensi()
     elseif s and (s.state == "galat" or s.state == "batal") then
       Bridge.hapusAktif()
     elseif not s then
+      if Bridge.hidup(aktif.id) == "1" then
+        pantau(aktif.id, aktif.path)
+        return
+      end
       Bridge.bersihkanSementara(aktif.id)
     end
   end
