@@ -31,11 +31,11 @@
 
 ## Tahap 3 — integrasi Lua CSR
 
-- [ ] Pertahankan pola pemuatan DEX/SO dari referensi.
-- [ ] Buat menu pilih audio dan lokasi hasil.
-- [ ] Buat layar progres yang dapat dinavigasi pembaca layar.
-- [ ] Tambahkan batal, hasil, dan pembersihan.
-- [ ] Pastikan fokus tidak meloncat ketika progres berubah.
+- [x] Pertahankan pola pemuatan DEX/SO dari referensi pada adapter Lua.
+- [x] Buat menu pilih audio berbasis penelusuran folder dan daftar enam hasil.
+- [x] Buat layar progres dan daftar hasil dengan kontrol native yang terbaca pembaca layar; uji navigasi nyata masih tertunda.
+- [x] Tambahkan batal, pembacaan hasil, pemutaran stem, dan pembersihan pekerjaan terputus.
+- [ ] Uji fokus screen reader agar tidak meloncat ketika progres berubah.
 
 ## Tahap 4 — uji kualitas musik
 
@@ -56,9 +56,9 @@ Catat:
 ## Tahap 5 — rilis
 
 - [ ] Audit lisensi dan atribusi.
-- [ ] Bangun binary final untuk ABI sasaran.
-- [ ] Buat paket ekstensi CSR.
-- [ ] Uji instalasi, upgrade, pembatalan, dan penghapusan.
+- [x] Siapkan build binary ARM64 dan DEX otomatis; uji perangkat masih diperlukan.
+- [x] Tambahkan pengemasan PPK otomatis pada workflow CI; uji instalasi masih diperlukan.
+- [ ] Uji instalasi PPK, upgrade, pembatalan, ekspor hasil, dan penghapusan.
 - [ ] Rilis hanya setelah uji perangkat nyata lulus.
 
 ## Kriteria tidak boleh dilewati
@@ -70,3 +70,13 @@ Jangan menyatakan ekstensi siap pakai sebelum mesin native, model, enam keluaran
 - [x] Tambahkan workflow GitHub Actions untuk membangun `DJLEngine.dex` dan `libdjl64.so`.
 - [x] Pastikan workflow build ARM64 lulus untuk C++ JNI dan Java DEX.
 - [x] Verifikasi output ELF AArch64 dan berkas Dalvik DEX; artefak CI berhasil diunggah.\n- [ ] Uji pemuatan DEX/SO dan pemanggilan JNI di perangkat Android nyata sebelum membuat paket PPK.
+
+## Implementasi UI dan model
+
+- [x] Buat adapter Lua berdasarkan alur pemuatan dan refleksi pada PPK referensi.
+- [x] Buat antarmuka CSR awal untuk pemilih audio, unduhan model, progres, pembatalan, dan enam hasil.
+- [x] Unduh model secara streaming di worker Java dan verifikasi SHA-256.
+- [x] Atur pemisahan satu segmen dan maksimal tiga thread komputasi CPU.
+- [x] Tambahkan deteksi Vulkan dengan fallback CPU.
+- [ ] Uji seluruh alur di perangkat Redmi 13C / Android 16.
+- [ ] Tambahkan ekspor enam stem ke folder Musik bersama dengan izin Android yang sesuai.
