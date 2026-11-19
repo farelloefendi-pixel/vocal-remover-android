@@ -7,7 +7,8 @@
 - [x] Catat pemilihan pustaka 32/64-bit.
 - [x] Catat pemantauan progres dan pembatalan berbasis file.
 - [x] Identifikasi perbedaan kontrak PCM array pada JNI referensi.
-- [x] Periksa header DEX, kelas, field, method signature, serta native method melalui tabel DEX.\n- [ ] Dekompilasi instruksi metode DEX lebih lanjut jika dibutuhkan untuk menyamakan detail internal.
+- [x] Periksa header DEX, kelas, field, method signature, serta native method melalui tabel DEX.
+- [ ] Dekompilasi instruksi metode DEX lebih lanjut jika dibutuhkan untuk menyamakan detail internal.
 
 ## Tahap 1 — audit dan validasi mesin
 
@@ -55,7 +56,7 @@ Catat:
 
 ## Tahap 5 — rilis
 
-- [ ] Audit lisensi dan atribusi.
+- [x] Audit lisensi kode dan dependensi; model HTDemucs ditahan karena batas lisensi bobot.\n- [ ] Audit lisensi dan atribusi model alternatif sebelum dipakai.
 - [x] Siapkan build binary ARM64 dan DEX otomatis; uji perangkat masih diperlukan.
 - [x] Tambahkan pengemasan PPK otomatis pada workflow CI; uji instalasi masih diperlukan.
 - [ ] Uji instalasi PPK, upgrade, pembatalan, ekspor hasil, dan penghapusan.
@@ -69,12 +70,13 @@ Jangan menyatakan ekstensi siap pakai sebelum mesin native, model, enam keluaran
 
 - [x] Tambahkan workflow GitHub Actions untuk membangun `DJLEngine.dex` dan `libdjl64.so`.
 - [x] Pastikan workflow build ARM64 lulus untuk C++ JNI dan Java DEX.
-- [x] Verifikasi output ELF AArch64 dan berkas Dalvik DEX; artefak CI berhasil diunggah.\n- [ ] Uji pemuatan DEX/SO dan pemanggilan JNI di perangkat Android nyata sebelum membuat paket PPK.
+- [x] Verifikasi output ELF AArch64 dan berkas Dalvik DEX; artefak CI berhasil diunggah.
+- [ ] Uji pemuatan DEX/SO dan pemanggilan JNI di perangkat Android nyata sebelum membuat paket PPK.
 
 ## Implementasi UI dan model
 
 - [x] Buat adapter Lua berdasarkan alur pemuatan dan refleksi pada PPK referensi.
-- [x] Buat antarmuka CSR awal untuk pemilih audio, unduhan model, progres, pembatalan, dan enam hasil.
+- [x] Buat antarmuka CSR development untuk pemilih audio, status model, progres, pembatalan, dan enam hasil.
 - [x] Siapkan mekanisme unduh streaming dan verifikasi SHA-256; pemakaian HTDemucs dinonaktifkan setelah audit lisensi.
 - [x] Atur pemisahan satu segmen dan maksimal tiga thread komputasi CPU.
 - [x] Tambahkan deteksi Vulkan dengan fallback CPU.
