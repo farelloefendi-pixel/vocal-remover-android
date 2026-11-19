@@ -321,7 +321,7 @@ public final class DJLEngine {
     }
 
     private static boolean kimPipelineReady() {
-        return false;
+        return true;
     }
 
     public static String mulai(final String audioPath, final String workDir, final String id) {
@@ -461,7 +461,7 @@ public final class DJLEngine {
 
             writeResult(new File(root, "hasil_" + id + ".json"), output);
             writeStatus(status, "selesai", 100, "Selesai",
-                    "Enam stem dan instrumental sepanjang audio berhasil dibuat");
+                    "Vokal dan instrumental sepanjang audio berhasil dibuat");
         } catch (CancellationException cancelled) {
             writeStatus(status, "batal", 0, "Dibatalkan", "Pekerjaan dihentikan atas permintaan pengguna");
             deleteTree(output);
@@ -487,12 +487,9 @@ public final class DJLEngine {
         }
     }
 
-    private static final int ONNX_SAMPLES = 343980;
-    private static final int ONNX_OVERLAP = ONNX_SAMPLES / 4;
-    private static final int ONNX_STRIDE = ONNX_SAMPLES - ONNX_OVERLAP;
-    private static final String[] STEM_NAMES = {
-            "drums", "bass", "other", "vocals", "guitar", "piano"
-    };
+    private static final int ONNX_SAMPLES = MDXNetDSP.CHUNK;
+    private static final int ONNX_OVERLAP = 0;
+    private static final int ONNX_STRIDE = MDXNetDSP.GEN;
     private static volatile OrtSession.RunOptions activeRunOptions;
 
     private static final class WavPcm16Writer implements AutoCloseable {
@@ -599,7 +596,9 @@ public final class DJLEngine {
         }
         final long total = bytes / 8L;
         if (total < 44100L) throw new IOException("Audio lebih pendek dari satu detik");
-        final long chunks = (total + ONNX_STRIDE - 1L) / ONNX_STRIDE;
+        final long pad = MDXNetDSP.GEN - (total % MDXNetDSP.GEN);
+        final long paddedLength = total + pad;
+        final long chunks = paddedLength / MDXNetDSP.GEN;
 
         OrtSession.SessionOptions options = new OrtSession.SessionOptions();
         options.setIntraOpNumThreads(2);
@@ -607,141 +606,110 @@ public final class DJLEngine {
         options.setMemoryPatternOptimization(true);
         options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
 
-        WavPcm16Writer[] writers = new WavPcm16Writer[7];
+        WavPcm16Writer[] writers = new WavPcm16Writer[2];
         try (OrtSession session = ortEnvironment.createSession(modelPath, options);
              OrtSession.RunOptions runOptions = new OrtSession.RunOptions();
              java.io.RandomAccessFile inputFile = new java.io.RandomAccessFile(prepared, "r")) {
-            if (!session.getInputNames().contains("mix")
-                    || !session.getOutputNames().contains("stems")) {
-                throw new IOException("Model tidak memiliki node mix dan stems");
+            if (!session.getInputNames().contains("input")
+                    || !session.getOutputNames().contains("output")) {
+                throw new IOException("Model bukan Kim Vocal 2 dengan node input dan output");
             }
-            TensorInfo inInfo = (TensorInfo) session.getInputInfo().get("mix").getInfo();
-            TensorInfo outInfo = (TensorInfo) session.getOutputInfo().get("stems").getInfo();
-            if (!sameShape(inInfo.getShape(), new long[] {1, 2, ONNX_SAMPLES})
-                    || !sameShape(outInfo.getShape(), new long[] {1, 6, 2, ONNX_SAMPLES})) {
-                throw new IOException("Bentuk tensor model tidak sesuai kontrak HTDemucs 6S");
+            TensorInfo inInfo = (TensorInfo) session.getInputInfo().get("input").getInfo();
+            TensorInfo outInfo = (TensorInfo) session.getOutputInfo().get("output").getInfo();
+            long[] expectedShape = new long[] {1, 4, MDXNetDSP.DIM_F, MDXNetDSP.DIM_T};
+            if (!sameShape(inInfo.getShape(), expectedShape)
+                    || !sameShape(outInfo.getShape(), expectedShape)) {
+                throw new IOException("Bentuk tensor Kim Vocal 2 tidak sesuai [1,4,3072,256]");
             }
 
-            for (int i = 0; i < 6; i++) {
-                writers[i] = new WavPcm16Writer(new File(output, STEM_NAMES[i] + ".wav"));
-            }
-            writers[6] = new WavPcm16Writer(new File(output, "instrumental.wav"));
+            writers[0] = new WavPcm16Writer(new File(output, "vocals.wav"));
+            writers[1] = new WavPcm16Writer(new File(output, "instrumental.wav"));
 
-            float[][][] accum = new float[6][2][ONNX_SAMPLES];
-            float[] weights = new float[ONNX_SAMPLES];
-            float[] instrumentalL = new float[ONNX_STRIDE];
-            float[] instrumentalR = new float[ONNX_STRIDE];
-            byte[] audioBlock = new byte[ONNX_SAMPLES * 8];
-            ByteBuffer tensorBytes = ByteBuffer.allocateDirect(ONNX_SAMPLES * 2 * 4)
+            float[] window = MDXNetDSP.createWindow();
+            float[] envelope = MDXNetDSP.createEnvelope(window);
+            MDXNetDSP.BluesteinFFT fft = new MDXNetDSP.BluesteinFFT(MDXNetDSP.N_FFT);
+            float[] left = new float[MDXNetDSP.CHUNK];
+            float[] right = new float[MDXNetDSP.CHUNK];
+            float[] vocalLeft = new float[MDXNetDSP.CHUNK];
+            float[] vocalRight = new float[MDXNetDSP.CHUNK];
+            float[] vocalOutLeft = new float[MDXNetDSP.GEN];
+            float[] vocalOutRight = new float[MDXNetDSP.GEN];
+            float[] instrumentalOutLeft = new float[MDXNetDSP.GEN];
+            float[] instrumentalOutRight = new float[MDXNetDSP.GEN];
+            byte[] audioBlock = new byte[MDXNetDSP.CHUNK * 8];
+            ByteBuffer tensorMemory = ByteBuffer.allocateDirect(MDXNetDSP.TENSOR_SIZE * 4)
                     .order(ByteOrder.nativeOrder());
-            FloatBuffer tensorData = tensorBytes.asFloatBuffer();
-            float[] fade = new float[ONNX_OVERLAP];
-            for (int i = 0; i < ONNX_OVERLAP; i++) {
-                fade[i] = i / (float) (ONNX_OVERLAP - 1);
-            }
+            FloatBuffer tensorData = tensorMemory.asFloatBuffer();
+            final float compensation = 1.009f;
 
             activeRunOptions = runOptions;
-            long start = 0;
             for (long chunk = 0; chunk < chunks; chunk++) {
                 checkCancelled(cancel);
-                int available = (int) Math.min(ONNX_SAMPLES, total - start);
-                java.util.Arrays.fill(audioBlock, (byte) 0);
-                inputFile.seek(start * 8L);
-                inputFile.readFully(audioBlock, 0, available * 8);
-                FloatBuffer rawInterleaved = ByteBuffer.wrap(audioBlock)
-                        .order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
-                rawInterleaved.limit(available * 2);
+                long outputStart = chunk * MDXNetDSP.GEN;
+                long inputStart = outputStart - MDXNetDSP.TRIM;
+                long validStart = Math.max(0L, inputStart);
+                long validEnd = Math.min(total, inputStart + MDXNetDSP.CHUNK);
+                int validCount = (int) Math.max(0L, validEnd - validStart);
 
-                tensorData.clear();
-                for (int i = 0; i < ONNX_SAMPLES; i++) {
-                    tensorData.put(i < available ? rawInterleaved.get(i * 2) : 0f);
+                java.util.Arrays.fill(left, 0f);
+                java.util.Arrays.fill(right, 0f);
+                if (validCount > 0) {
+                    int byteCount = validCount * 8;
+                    inputFile.seek(validStart * 8L);
+                    inputFile.readFully(audioBlock, 0, byteCount);
+                    FloatBuffer raw = ByteBuffer.wrap(audioBlock, 0, byteCount)
+                            .order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
+                    int destinationOffset = (int) (validStart - inputStart);
+                    for (int i = 0; i < validCount; i++) {
+                        left[destinationOffset + i] = raw.get(i * 2);
+                        right[destinationOffset + i] = raw.get(i * 2 + 1);
+                    }
                 }
-                for (int i = 0; i < ONNX_SAMPLES; i++) {
-                    tensorData.put(i < available ? rawInterleaved.get(i * 2 + 1) : 0f);
-                }
-                tensorData.flip();
 
-                try (OnnxTensor tensor = OnnxTensor.createTensor(
-                        ortEnvironment, tensorData, new long[] {1, 2, ONNX_SAMPLES})) {
+                MDXNetDSP.createInput(left, right, tensorData, window, fft);
+                try (OnnxTensor input = OnnxTensor.createTensor(
+                            ortEnvironment, tensorData, expectedShape)) {
                     Map<String, OnnxTensor> feeds = new HashMap<>();
-                    feeds.put("mix", tensor);
+                    feeds.put("input", input);
                     try (OrtSession.Result result = session.run(feeds, runOptions)) {
-                        OnnxTensor outputTensor = (OnnxTensor) result.get("stems").orElse(null);
+                        OnnxTensor outputTensor = (OnnxTensor) result.get("output").orElse(null);
                         if (outputTensor == null
-                                || !sameShape(outputTensor.getInfo().getShape(),
-                                        new long[] {1, 6, 2, ONNX_SAMPLES})) {
-                            throw new IOException("Output inferensi tidak sesuai enam stem");
+                                || !sameShape(outputTensor.getInfo().getShape(), expectedShape)) {
+                            throw new IOException("Output inferensi Kim Vocal 2 tidak valid");
                         }
                         FloatBuffer values = outputTensor.getFloatBuffer();
-                        int expected = 6 * 2 * ONNX_SAMPLES;
-                        if (values == null || values.remaining() != expected) {
-                            throw new IOException("Buffer output inferensi tidak lengkap");
+                        if (values == null || values.remaining() != MDXNetDSP.TENSOR_SIZE) {
+                            throw new IOException("Buffer output Kim Vocal 2 tidak lengkap");
                         }
-                        for (int i = 0; i < ONNX_SAMPLES; i++) {
-                            float weight;
-                            if (i < ONNX_OVERLAP) weight = fade[i];
-                            else if (i >= ONNX_SAMPLES - ONNX_OVERLAP) {
-                                weight = fade[ONNX_SAMPLES - 1 - i];
-                            } else weight = 1f;
-                            if (i >= available) continue;
-                            weights[i] += weight;
-                            for (int stem = 0; stem < 6; stem++) {
-                                for (int channel = 0; channel < 2; channel++) {
-                                    float value = values.get((stem * 2 + channel)
-                                            * ONNX_SAMPLES + i);
-                                    if (Float.isNaN(value) || Float.isInfinite(value)) {
-                                        throw new IOException("Model menghasilkan nilai audio tidak valid");
-                                    }
-                                    accum[stem][channel][i] += value * weight;
-                                }
-                            }
-                            if ((i & 8191) == 0) checkCancelled(cancel);
-                        }
+                        MDXNetDSP.synthesize(values, 0, vocalLeft, window, envelope, fft,
+                                () -> checkCancelled(cancel));
+                        MDXNetDSP.synthesize(values, 1, vocalRight, window, envelope, fft,
+                                () -> checkCancelled(cancel));
                     }
                 }
 
-                long remaining = total - start;
-                int flush = (int) Math.min(ONNX_STRIDE, remaining);
-                for (int stem = 0; stem < 6; stem++) {
-                    writers[stem].writeNormalized(
-                            accum[stem][0], accum[stem][1], weights, flush);
+                int writeCount = (int) Math.min((long) MDXNetDSP.GEN, total - outputStart);
+                for (int i = 0; i < writeCount; i++) {
+                    int sourceIndex = MDXNetDSP.TRIM + i;
+                    float vocalL = vocalLeft[sourceIndex] * compensation;
+                    float vocalR = vocalRight[sourceIndex] * compensation;
+                    float mixL = left[sourceIndex];
+                    float mixR = right[sourceIndex];
+                    vocalOutLeft[i] = vocalL;
+                    vocalOutRight[i] = vocalR;
+                    instrumentalOutLeft[i] = mixL - vocalL;
+                    instrumentalOutRight[i] = mixR - vocalR;
                 }
-                for (int i = 0; i < flush; i++) {
-                    float weight = Math.max(weights[i], 1e-8f);
-                    float left = 0f;
-                    float right = 0f;
-                    for (int stem = 0; stem < 6; stem++) {
-                        if (stem == 3) continue;
-                        left += accum[stem][0][i] / weight;
-                        right += accum[stem][1][i] / weight;
-                    }
-                    instrumentalL[i] = left;
-                    instrumentalR[i] = right;
-                }
-                writers[6].write(instrumentalL, instrumentalR, flush);
-
-                if (remaining > ONNX_STRIDE) {
-                    for (int stem = 0; stem < 6; stem++) {
-                        for (int channel = 0; channel < 2; channel++) {
-                            System.arraycopy(accum[stem][channel], ONNX_STRIDE,
-                                    accum[stem][channel], 0, ONNX_OVERLAP);
-                            java.util.Arrays.fill(accum[stem][channel],
-                                    ONNX_OVERLAP, ONNX_SAMPLES, 0f);
-                        }
-                    }
-                    System.arraycopy(weights, ONNX_STRIDE, weights, 0, ONNX_OVERLAP);
-                    java.util.Arrays.fill(weights, ONNX_OVERLAP, ONNX_SAMPLES, 0f);
-                    start += ONNX_STRIDE;
-                }
+                writers[0].write(vocalOutLeft, vocalOutRight, writeCount);
+                writers[1].write(instrumentalOutLeft, instrumentalOutRight, writeCount);
 
                 int percent = 30 + (int) ((chunk + 1L) * 70L / chunks);
                 writeStatus(status, "jalan", percent, "Memisahkan audio",
                         "Segmen " + (chunk + 1L) + " dari " + chunks);
             }
+
             for (WavPcm16Writer writer : writers) writer.close();
-            for (WavPcm16Writer writer : writers) {
-                writer.validate(total);
-            }
+            for (WavPcm16Writer writer : writers) writer.validate(total);
         } finally {
             activeRunOptions = null;
             for (WavPcm16Writer writer : writers) {
@@ -1046,7 +1014,7 @@ public final class DJLEngine {
     }
 
     private static void writeResult(File file, File outputDirectory) throws IOException {
-        String[] names = { "drums", "bass", "other", "vocals", "guitar", "piano", "instrumental" };
+        String[] names = { "vocals", "instrumental" };
         StringBuilder json = new StringBuilder("{\"v\":1,\"outputs\":{");
         for (int i = 0; i < names.length; i++) {
             if (i > 0) json.append(',');
