@@ -256,7 +256,7 @@ public final class DJLEngine {
     public static String infoMesin() {
         if (!libraryLoaded) return "Mesin native belum dimuat";
         if (ortEnvironment == null) return "ONNX Runtime belum siap";
-        return "ONNX Runtime Android siap. Kontrak Kim Vocal 2 telah ditetapkan; pemrosesan audio lengkap belum diaktifkan.";
+        return "ONNX Runtime Android siap. Jalur Kim Vocal 2 MDX-Net, STFT/iSTFT, dan dua keluaran telah diintegrasikan.";
     }
 
     public static synchronized String ujiModelKimVocal2(String path) {
