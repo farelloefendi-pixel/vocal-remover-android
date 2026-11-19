@@ -78,26 +78,28 @@ jobs:
 
       - name: Verify outputs
         run: |
-          mkdir -p dist/bridge/lua
+          mkdir -p dist/bridge/lua dist/licenses
           cp main.lua dist/main.lua
           cp bridge/lua/DJLBridge.lua dist/bridge/lua/DJLBridge.lua
+          cp licenses/* dist/licenses/
           file dist/libdjl64.so dist/DJLEngine.dex
           readelf -h dist/libdjl64.so | grep -E 'Class:|Machine:'
           sha256sum dist/libdjl64.so dist/DJLEngine.dex | tee dist/SHA256SUMS.txt
-          (cd dist && zip -q -r Vocal_Remover_CSR.ppk main.lua DJLEngine.dex libdjl64.so bridge/lua/DJLBridge.lua)
-          unzip -l dist/Vocal_Remover_CSR.ppk
+          (cd dist && zip -q -r Vocal_Remover_CSR_DEV.ppk main.lua DJLEngine.dex libdjl64.so bridge/lua/DJLBridge.lua licenses)
+          unzip -l dist/Vocal_Remover_CSR_DEV.ppk
           cat > dist/BUILD_INFO.txt <<'EOF'
           Product: CSR/Jieshuo Vocal Remover native bridge
           ABI: arm64-v8a
           Android minimum API: 29
           NDK: 27.2.12479018
           JNI class: DJLEngine
-          Model file (separate download): 5c90dfd2.safetensors
+          Model: disabled pending clarification of HTDemucs 6-stem weight rights
+          Package status: development prototype, not a functional release
           EOF
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: vocal-remover-csr-arm64
+          name: vocal-remover-csr-dev-arm64
           path: dist/*
           if-no-files-found: error
