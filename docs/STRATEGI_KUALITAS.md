@@ -73,4 +73,4 @@ Ukuran file model tidak sama dengan kebutuhan RAM saat inferensi.
 
 ## Status kode saat ini
 
-Identitas model, checksum, smoke test bentuk tensor, dan pipeline DSP Java awal telah diperbarui. Pemanggilan pemisahan lama diblokir. Uji round-trip DSP gagal pada fixture awal karena komponen frekuensi di atas batas 3072 bin; fixture telah diperbaiki dan pengujian CI baru sedang berjalan. Belum ada PPK yang tervalidasi pada perangkat. Model tidak boleh diaktifkan sampai implementasi dan pengujian lengkap.
+Identitas model, checksum, smoke test bentuk tensor, dan pipeline DSP Java awal telah diperbarui. Pemanggilan pemisahan lama diblokir. Uji direct-DFT dan round-trip DSP lulus; galat maksimum sekitar 3,87e-7. Model ONNX asli lolos pemeriksaan hash dan inferensi CPU. Kompilasi Java/D8 dan sintaks Lua lulus CI. Belum ada PPK yang tervalidasi pada perangkat. Model tidak boleh diaktifkan sampai implementasi dan pengujian lengkap.
