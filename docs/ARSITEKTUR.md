@@ -54,7 +54,7 @@ Pola Lua direplikasi dari `main.lua` PPK referensi:
 1. `DJL.base` digunakan untuk mencari file mesin di folder ekstensi.
 2. `DJLEngine.dex` dan pustaka SO dipilih berdasarkan ABI.
 3. File disalin ke direktori cache privat.
-4. Kelas dimuat dengan `DexClassLoader(dexPath, optimizedDir, null, ctx.getClassLoader())`.
+4. Kelas dimuat dengan `DexClassLoader(dexPath, optimizedDir, ortFolder, ctx.getClassLoader())`; `ortFolder` memuat `libonnxruntime.so` agar pemuatan native melalui `System.loadLibrary` dapat ditemukan.
 5. Kelas disimpan pada `System.getProperties()` agar tidak dibuat ulang setiap kali fungsi dipanggil.
 6. Metode Java statis dipanggil menggunakan `getDeclaredMethod` dan `invoke`.
 7. Worker menulis status ke file; Lua membaca status melalui Handler.
@@ -170,4 +170,4 @@ ONNX Runtime Android 1.32.0 kini ditambahkan sebagai dependensi AAR resmi Maven 
 
 Tahap ini baru mengintegrasikan dan menginisialisasi runtime, belum membuka model atau menjalankan inferensi. Mesin C++ lama masih dipertahankan sebagai prototipe dan bukan jalur inferensi ONNX. Model ONNX FP16-weights sekitar 136 MB tetap harus diverifikasi checksum dan hak distribusinya. Kebutuhan RAM serta kecepatan di Apple M4 Pro yang dilaporkan penerbit tidak dapat digeneralisasi ke Redmi 13C.
 
-CI memeriksa keberadaan kelas OrtEnvironment di DEX dan memastikan libonnxruntime.so berarsitektur AArch64. Pemeriksaan tersebut hanya validasi paket/kompilasi; belum membuktikan runtime dapat dimuat di CSR pada perangkat. Sebelum jalur ONNX dinyatakan siap, build dan uji perangkat harus membuktikan pembukaan model, satu inferensi uji, pemrosesan file audio panjang secara bertahap, enam WAV yang valid, pembatalan tanpa file rusak, dan pembersihan file sementara. Pengujian perangkat nyata tetap wajib.
+CI memeriksa keberadaan kelas OrtEnvironment di DEX, memastikan libonnxruntime.so berarsitektur AArch64, dan memeriksa alignment halaman ELF 16 KB pada kedua pustaka native. Pemeriksaan tersebut hanya validasi paket/kompilasi; belum membuktikan runtime dapat dimuat di CSR pada perangkat. Sebelum jalur ONNX dinyatakan siap, build dan uji perangkat harus membuktikan pembukaan model, satu inferensi uji, pemrosesan file audio panjang secara bertahap, enam WAV yang valid, pembatalan tanpa file rusak, dan pembersihan file sementara. Pengujian perangkat nyata tetap wajib.
