@@ -196,7 +196,7 @@ local function siapkanBridge()
   return true
 end
 
-local tampilHasil = function(id, pathLagu)
+tampilHasil = function(id, pathLagu)
   local daftar, galat = Bridge.ambilHasil(id)
   if not daftar then
     dialogPesan("Hasil belum bisa dibaca", galat, {
@@ -295,7 +295,7 @@ putar = function(path, nama)
   end
 end
 
-local statusDialogModel = function(pathLagu)
+statusDialogModel = function(pathLagu)
   local siap, pesan = Bridge.modelSiap()
   if siap then
     if pathLagu then mulaiPemisahan(pathLagu) else menuUtama() end
@@ -486,7 +486,7 @@ pilihAudio = function(path)
   end, function() menuUtama() end, atas)
 end
 
-function menuStatus()
+local function menuStatus()
   local ok, info = Bridge.statusMesin()
   local siap, model = Bridge.modelSiap()
   local teks = tostring(info) .. "\n\nModel: " .. (siap and "siap" or tostring(model))
