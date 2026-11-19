@@ -194,7 +194,7 @@ end
 
 function M.modelSiap()
   if not MODEL_ENABLED then
-    return false, "HTDemucs 6-stem ditahan: lisensi bobot belum mengizinkan penggunaan umum. Pilih model alternatif yang lisensinya jelas."
+    return false, "Kim Vocal 2 belum dapat digunakan karena mesin inferensi MDX-Net belum selesai diimplementasikan."
   end
   local kls, pesan = M.siapkan()
   if not kls then return false, pesan end
@@ -206,7 +206,7 @@ end
 
 function M.unduhModel()
   if not MODEL_ENABLED or not MODEL_URL then
-    return false, "Unduhan HTDemucs dinonaktifkan sementara karena lisensi bobot belum jelas."
+    return false, "Unduhan Kim Vocal 2 belum diaktifkan sampai pemeriksaan ONNX dan pipeline MDX-Net selesai."
   end
   local kls, pesan = M.siapkan()
   if not kls then return false, pesan end
@@ -270,7 +270,7 @@ end
 
 function M.pasangModel(path)
   if not MODEL_ENABLED then
-    return false, "Pemasangan HTDemucs dinonaktifkan sementara karena lisensi bobot belum jelas."
+    return false, "Pemasangan Kim Vocal 2 belum diaktifkan sampai pemeriksaan ONNX dan pipeline MDX-Net selesai."
   end
   local kls, pesan = M.siapkan()
   if not kls then return false, pesan end
@@ -346,7 +346,7 @@ function M.ambilHasil(id)
   local ok, hasil = pcall(function()
     local json = luajava.bindClass("org.json.JSONObject")(isi)
     local outputs = json.getJSONObject("outputs")
-    local nama = { "vocals", "drums", "bass", "other", "guitar", "piano", "instrumental" }
+    local nama = { "vocals", "instrumental" }
     local daftar = {}
     for _, k in ipairs(nama) do
       local path = outputs.getString(k)
