@@ -391,6 +391,10 @@ public final class DJLEngine {
             try (FileOutputStream stream = new FileOutputStream(cancel, false)) {
                 stream.write("cancel".getBytes(StandardCharsets.UTF_8));
             }
+            OrtSession.RunOptions current = activeRunOptions;
+            if (current != null) {
+                try { current.setTerminate(true); } catch (Throwable ignored) { }
+            }
             if (libraryLoaded) {
                 nativeCancel();
             }
@@ -581,7 +585,7 @@ public final class DJLEngine {
         options.setIntraOpNumThreads(2);
         options.setInterOpNumThreads(1);
         options.setMemoryPatternOptimization(true);
-        options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL);
+        options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
 
         WavPcm16Writer[] writers = new WavPcm16Writer[7];
         try (OrtSession session = ortEnvironment.createSession(modelPath, options);
@@ -607,9 +611,6 @@ public final class DJLEngine {
             float[] weights = new float[ONNX_SAMPLES];
             float[] instrumentalL = new float[ONNX_STRIDE];
             float[] instrumentalR = new float[ONNX_STRIDE];
-            ByteBuffer rawBytes = ByteBuffer.allocate(ONNX_SAMPLES * 2 * 4)
-                    .order(ByteOrder.LITTLE_ENDIAN);
-            FloatBuffer rawInterleaved = rawBytes.asFloatBuffer();
             ByteBuffer tensorBytes = ByteBuffer.allocateDirect(ONNX_SAMPLES * 2 * 4)
                     .order(ByteOrder.nativeOrder());
             FloatBuffer tensorData = tensorBytes.asFloatBuffer();
@@ -623,13 +624,10 @@ public final class DJLEngine {
             for (long chunk = 0; chunk < chunks; chunk++) {
                 checkCancelled(cancel);
                 int available = (int) Math.min(ONNX_SAMPLES, total - start);
-                rawBytes.clear();
-                for (int i = 0; i < ONNX_SAMPLES * 2; i++) rawBytes.putFloat(0f);
-                rawBytes.flip();
                 byte[] audioBlock = new byte[available * 8];
                 inputFile.seek(start * 8L);
                 inputFile.readFully(audioBlock);
-                rawInterleaved = ByteBuffer.wrap(audioBlock)
+                FloatBuffer rawInterleaved = ByteBuffer.wrap(audioBlock)
                         .order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
 
                 tensorData.clear();
@@ -1023,7 +1021,7 @@ public final class DJLEngine {
     }
 
     private static void writeResult(File file, File outputDirectory) throws IOException {
-        String[] names = { "drums", "bass", "other", "vocals", "guitar", "piano" };
+        String[] names = { "drums", "bass", "other", "vocals", "guitar", "piano", "instrumental" };
         StringBuilder json = new StringBuilder("{\"v\":1,\"outputs\":{");
         for (int i = 0; i < names.length; i++) {
             if (i > 0) json.append(',');
