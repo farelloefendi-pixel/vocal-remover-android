@@ -34,16 +34,23 @@ local pantauId
 local unduhPantau = false
 local hasilTerakhir
 local Bridge
+local menuUtama, pilihAudio, mulaiPemisahan, pantau
+local mulaiUnduhModel, statusDialogModel, tampilHasil, putar, salinLokasi
 
 local function aman(fn)
   return function(...)
-    local ok, a, b = xpcall(fn, function(e)
+    local jumlah = select("#", ...)
+    local argumen = { ... }
+    local unp = table.unpack or unpack
+    local ok, a, b = xpcall(function()
+      return fn(unp(argumen, 1, jumlah))
+    end, function(e)
       local t = tostring(e)
       pcall(function()
         if debug and debug.traceback then t = t .. "\n" .. debug.traceback("", 2) end
       end)
       return t
-    end, ...)
+    end)
     if not ok then
       pcall(function() Toast.makeText(ctx, "Galat: " .. tostring(a), 1).show() end)
       return nil
@@ -189,7 +196,7 @@ local function siapkanBridge()
   return true
 end
 
-local function tampilHasil(id, pathLagu)
+local tampilHasil = function(id, pathLagu)
   local daftar, galat = Bridge.ambilHasil(id)
   if not daftar then
     dialogPesan("Hasil belum bisa dibaca", galat, {
@@ -232,7 +239,7 @@ local function tampilHasil(id, pathLagu)
   T("Pilih salah satu stem untuk diputar atau menyalin lokasinya.", 14))
 end
 
-function salinLokasi(path)
+salinLokasi = function(path)
   local ok = pcall(function()
     local clipboard = ctx.getSystemService("clipboard")
     local ClipData = luajava.bindClass("android.content.ClipData")
@@ -241,7 +248,7 @@ function salinLokasi(path)
   if ok then toast("Lokasi berkas disalin") else toast("Tidak dapat menyalin lokasi berkas") end
 end
 
-function putar(path, nama)
+putar = function(path, nama)
   if pemutar then
     pcall(function() pemutar.stop() end)
     pcall(function() pemutar.release() end)
@@ -288,7 +295,7 @@ function putar(path, nama)
   end
 end
 
-local function statusDialogModel(pathLagu)
+local statusDialogModel = function(pathLagu)
   local siap, pesan = Bridge.modelSiap()
   if siap then
     if pathLagu then mulaiPemisahan(pathLagu) else menuUtama() end
@@ -304,7 +311,7 @@ local function statusDialogModel(pathLagu)
     }, function() menuUtama() end)
 end
 
-function mulaiUnduhModel(pathLagu)
+mulaiUnduhModel = function(pathLagu)
   local ok, pesan = Bridge.unduhModel()
   if not ok then
     dialogPesan("Unduhan tidak dimulai", tostring(pesan), {
@@ -350,7 +357,7 @@ function mulaiUnduhModel(pathLagu)
   tunda(250, periksa)
 end
 
-function mulaiPemisahan(path)
+mulaiPemisahan = function(path)
   local siap, pesan = Bridge.modelSiap()
   if not siap then
     statusDialogModel(path)
@@ -366,7 +373,7 @@ function mulaiPemisahan(path)
   pantau(id, path)
 end
 
-function pantau(id, path)
+pantau = function(id, path)
   pantauId = id
   local d = dialogBaru("Memisahkan audio")
   d.setMessage("Memulai mesin Demucs...")
@@ -415,7 +422,7 @@ function pantau(id, path)
   tunda(250, periksa)
 end
 
-function pilihAudio(path)
+pilihAudio = function(path)
   path = path or "/storage/emulated/0"
   local folder = File(path)
   if not folder.exists() then
@@ -496,7 +503,7 @@ function menuStatus()
   }, function() menuUtama() end)
 end
 
-function menuUtama()
+menuUtama = function()
   local butir = {
     "Pilih audio untuk dipisahkan",
     "Lihat enam stem hasil terakhir",
