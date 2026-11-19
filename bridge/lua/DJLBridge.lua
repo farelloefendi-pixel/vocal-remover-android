@@ -240,6 +240,15 @@ function M.modelSiap()
   return false, tostring(string.match(hasil, "|(.*)") or hasil)
 end
 
+function M.hapusModel()
+  if unduhAktif then return false, "Pengunduhan model masih berjalan" end
+  local kls, pesan = M.siapkan()
+  if not kls then return false, pesan end
+  local ok, hasil = pcall(function() return M.panggil(kls, "hapusModel", 0, {}) end)
+  if not ok then return false, tostring(hasil) end
+  return string.sub(hasil, 1, 2) == "OK", tostring(string.match(hasil, "|(.*)") or hasil)
+end
+
 function M.unduhModel()
   if not MODEL_ENABLED or not MODEL_URL then
     return false, "Unduhan model dinonaktifkan oleh konfigurasi."
