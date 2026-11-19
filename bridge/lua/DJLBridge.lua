@@ -1,7 +1,7 @@
 local M = {}
 
-local MODEL_URL = nil
-local MODEL_ENABLED = false
+local MODEL_URL = "https://huggingface.co/aaatmy/uvr-mdx-net-onnx/resolve/main/Kim_Vocal_2.onnx"
+local MODEL_ENABLED = true
 local MODEL_STATUS = "model_status.txt"
 local ACTIVE_FILE = "aktif.txt"
 
