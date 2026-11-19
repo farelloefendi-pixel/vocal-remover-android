@@ -211,8 +211,8 @@ tampilHasil = function(id, pathLagu)
     local status = item.tersedia and "tersedia" or "tidak ditemukan"
     butir[i] = item.nama .. ", " .. status
   end
-  butir[#butir + 1] = "Hapus tujuh file hasil"
-  layarDaftar("Enam stem dan instrumental", butir, function(i)
+  butir[#butir + 1] = "Hapus dua file hasil"
+  layarDaftar("Hasil pemisahan vokal dan instrumental", butir, function(i)
     if i <= #daftar then
       local item = daftar[i]
       if not item.tersedia then
@@ -225,7 +225,7 @@ tampilHasil = function(id, pathLagu)
         { "Kembali", function() tampilHasil(id, pathLagu) end }
       }, function() tampilHasil(id, pathLagu) end)
     else
-      dialogPesan("Hapus hasil", "Hapus keenam stem dan file instrumental untuk lagu ini?", {
+      dialogPesan("Hapus hasil", "Hapus kedua file hasil untuk lagu ini?", {
         { "Hapus", function()
           Bridge.hapusHasil(id)
           hasilTerakhir = nil
@@ -301,8 +301,8 @@ statusDialogModel = function(pathLagu)
     if pathLagu then mulaiPemisahan(pathLagu) else menuUtama() end
     return
   end
-  dialogPesan("Mesin enam stem belum diaktifkan",
-    "Bobot HTDemucs 6-stem memiliki batas lisensi yang belum jelas untuk penggunaan umum. Karena itu, unduhan dan pemakaiannya sementara dinonaktifkan. Kode mesin tetap disimpan sebagai prototipe. Kita sedang menilai model alternatif dengan lisensi bobot yang lebih jelas.",
+  dialogPesan("Mesin Kim Vocal 2 belum siap",
+    "Model yang dipilih adalah Kim Vocal 2 MDX-Net. Mesin pemrosesan ONNX dan STFT/iSTFT khusus model ini masih dalam tahap implementasi dan belum boleh digunakan untuk pemisahan audio.",
     {
       { "Kembali ke menu", function() menuUtama() end },
       { "Pilih audio lain", function() pilihAudio() end }
@@ -499,7 +499,7 @@ local function menuStatus()
   local siap, model = Bridge.modelSiap()
   local teks = tostring(info) .. "\n\nStatus model: "
     .. (siap and "siap" or tostring(model))
-    .. "\n\nUnduhan HTDemucs saat ini dinonaktifkan sampai hak penggunaan bobot dipastikan."
+    .. "\n\nMesin Kim Vocal 2 belum diaktifkan karena implementasi inferensi dan pemrosesan audionya belum selesai."
   dialogPesan("Status mesin dan lisensi model", teks, {
     { "Kembali", function() menuUtama() end }
   }, function() menuUtama() end)
@@ -508,7 +508,7 @@ end
 menuUtama = function()
   local butir = {
     "Pilih audio untuk dipisahkan",
-    "Lihat enam stem dan instrumental terakhir",
+    "Lihat hasil vokal dan instrumental terakhir",
     "Status mesin dan model",
     "Pengaturan dan informasi",
     "Tutup"
@@ -527,7 +527,7 @@ menuUtama = function()
       menuStatus()
     elseif i == 4 then
       dialogPesan("Tentang Vocal Remover CSR",
-        "Prototipe ekstensi CSR untuk pemisahan audio offline. Mesin C++/Java dan antarmuka Lua sedang dikembangkan. Model HTDemucs 6-stem belum diaktifkan karena status lisensi bobot perlu dipastikan. Proses dirancang berjalan di worker agar UI dan pembaca layar tetap responsif.",
+        "Ekstensi CSR untuk pemisahan audio offline menggunakan Kim Vocal 2 MDX-Net. Hasil yang direncanakan hanya vokal dan instrumental. Mesin inferensi ONNX dan pemrosesan STFT/iSTFT masih dikembangkan. Proses dirancang berjalan di worker agar UI dan pembaca layar tetap responsif.",
         { { "Kembali", function() menuUtama() end } }, function() menuUtama() end)
     else
       tutupDialog()
