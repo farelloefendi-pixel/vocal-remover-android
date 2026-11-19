@@ -26,3 +26,12 @@ Thumbs.db
 *.onnx
 *.tflite
 *.bin
+
+# Generated Android/native binaries and archives
+*.so
+*.dex
+*.class
+*.jar
+*.a
+*.o
+*.ppk
