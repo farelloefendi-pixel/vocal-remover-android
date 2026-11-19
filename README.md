@@ -1,54 +1,49 @@
 # Vocal Remover CSR
 
-Proyek ekstensi **Commentary Screen Reader (CSR) / Jieshuo** untuk memisahkan audio musik secara offline di Android.
-
-> **Status: tahap perancangan dan pemeriksaan integrasi.** Belum ada ekstensi siap pakai atau binary mesin pemisah yang dapat dipasang.
+Proyek **ekstensi CSR/Jieshuo** untuk memisahkan audio musik secara offline di Android. Produk akhirnya adalah paket ekstensi PPK, **bukan APK**.
 
 ## Sasaran
 
-- Bentuk produk akhir: ekstensi CSR/Jieshuo, bukan APK mandiri.
-- Antarmuka dan alur penggunaan: Lua.
-- Jembatan ke kode native: Java DEX + JNI, mengikuti pola referensi ekstensi yang diberikan.
-- Mesin pemisahan: C++ dengan model pemisahan musik enam stem yang akan divalidasi.
-- Keluaran yang dituju: vocals, drums, bass, other, guitar, dan piano.
-- Operasi offline, progres yang dapat dibaca pembaca layar, pembatalan, serta pembersihan berkas sementara.
+- Antarmuka dan pengendali: Lua.
+- Jembatan native: Java DEX yang dimuat melalui `DexClassLoader`.
+- Mesin pemisahan: C++ JNI, model Demucs v4 HTDemucs 6-stem.
+- Hasil: vocals, drums, bass, other, guitar, dan piano.
+- Pemrosesan berjalan pada worker Java/C++, satu pekerjaan pada satu waktu.
+- Progres, pembatalan, pemulihan pekerjaan, dan pembersihan file sementara.
+- Model diunduh sekali melalui koneksi internet; pemisahan berikutnya berjalan offline.
 
-## Perangkat sasaran awal
+## Perangkat sasaran
 
-Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal harus konservatif: satu pekerjaan pemisahan pada satu waktu, pembatasan memori, dan pemrosesan bertahap.
+Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal dibatasi satu segmen dan maksimal tiga thread komputasi CPU. Mesin mencoba Vulkan bila tersedia dan menggunakan CPU jika GPU tidak dapat digunakan.
 
-## Arsitektur yang dituju
+## Struktur implementasi
 
-`main.lua` mengelola antarmuka CSR dan memanggil kelas Java dari DEX melalui `DexClassLoader`. Kelas Java memuat pustaka native ARM64 (`.so`) dan menjadi penghubung JNI ke mesin C++. Mesin memproses audio dan menghasilkan berkas stem.
+- `main.lua`: menu CSR, pemilih audio, progres, pembatalan, dan daftar enam hasil.
+- `bridge/lua/DJLBridge.lua`: adapter Lua mengikuti pola `MD` pada PPK referensi.
+- `bridge/java/DJLEngine.java`: kelas DEX, decoder MediaCodec, unduhan model, worker, dan pemanggilan JNI.
+- `.github/workflows/build-engine.yml`: build otomatis C++ ARM64, DEX, pemeriksaan sintaks Lua, dan pengemasan PPK.
 
-Pola pemuatan DEX, pemilihan pustaka berdasarkan arsitektur, pemisahan pekerjaan dari utas antarmuka, pemantauan status, dan permintaan pembatalan mengacu pada ekstensi referensi. Mesin Demucs yang dipilih menyediakan API C++ dan binding JNI yang dapat diarahkan ke kelas Java DEX khusus.
+## Build otomatis
 
-## Implementasi awal
+[Melihat build dan artefak ekstensi PPK di GitHub Actions](https://github.com/farelloefendi-pixel/vocal-remover-android/actions)
 
-- Sumber Java DEX: `bridge/java/DJLEngine.java`.
-- Kontrak Lua–Java mengikuti `muat`, `mulai`, `batal`, dan `hidup` pada PPK referensi.
-- Workflow GitHub Actions berhasil membangun DEX dan pustaka JNI ARM64. [Lihat hasil build dan artefak](https://github.com/farelloefendi-pixel/vocal-remover-android/actions/runs/44524494836).
-- Model terpisah dan tidak dimasukkan ke repositori: `5c90dfd2.safetensors` (checksum diverifikasi oleh bridge saat mulai bekerja).
-- Build CI berhasil. Binary belum diuji di perangkat dan belum menjadi ekstensi PPK siap pasang.
+Jika build terbaru berhasil, artefak bernama `Vocal_Remover_CSR.ppk` tersedia pada bagian Artifacts di halaman run. Binary DEX dan SO juga disediakan terpisah untuk pemeriksaan.
 
-## Dokumen proyek
+## Model
 
-- [Pemeriksaan pola ekstensi referensi](docs/REFERENSI_INTEGRASI.md)
-- [Audit mesin Demucs C++ dan kontrak JNI](docs/MESIN_DEMUCS.md)
+Model tidak disimpan di Git dan tidak dimasukkan ke paket PPK. Saat pertama kali digunakan, ekstensi mengunduh `5c90dfd2.safetensors` dari sumber Hugging Face yang dipatok ke revisi tertentu, menyimpan secara streaming, lalu memeriksa SHA-256 sebelum digunakan. Ukuran unduhan sekitar 55 MB.
+
+## Batas validasi
+
+- Build CI membuktikan kode dapat dikompilasi dan dikemas; itu belum membuktikan pemisahan audio berhasil di Redmi 13C.
+- Pemuatan DEX/SO, JNI, MediaCodec, Vulkan/CPU, pembatalan, dan pemulihan masih perlu uji perangkat nyata.
+- Hasil saat ini disimpan pada direktori privat ekstensi dan dapat diputar dari menu hasil. Fitur ekspor ke folder musik bersama masih perlu diselesaikan dan diuji.
+- HTDemucs 6S tidak memiliki stem rebab khusus. Rebab, suling, gender, saron, bonang, dan instrumen tradisional lain harus diuji; tidak ada jaminan semuanya akan selalu terpisah sempurna.
+
+## Dokumen
+
+- [Audit pola PPK referensi](docs/REFERENSI_INTEGRASI.md)
+- [Audit mesin Demucs dan JNI](docs/MESIN_DEMUCS.md)
 - [Arsitektur teknis](docs/ARSITEKTUR.md)
-- [Tahapan pengembangan dan pengujian](docs/ROADMAP.md)
-
-## Batasan yang sudah diketahui
-
-- Model enam stem tidak menyediakan stem rebab khusus. Hasil rebab, suling, gamelan, gender, saron, dan bonang harus diuji; tidak ada jaminan instrumen tradisional akan selalu dipertahankan sempurna.
-- Model dan binary native belum disertakan dalam repositori.
-- Mesin belum dikompilasi atau dijalankan pada perangkat sasaran.
-- APK mandiri bukan target proyek.
-
-## Prinsip pengembangan
-
-1. Ikuti pola integrasi yang benar-benar ditemukan pada ekstensi referensi.
-2. Adaptasi JNI untuk input audio berbasis berkas dan buffer bertahap, bukan satu array PCM besar.
-3. Jaga UI CSR tetap responsif dan fokus pembaca layar tetap stabil.
-4. Uji pada perangkat sasaran sebelum menyatakan fitur berhasil.
-5. Catat lisensi, asal model, checksum, dan instruksi distribusi sebelum menyertakan aset model.
+- [Panduan alur CSR](docs/PENGGUNAAN_CSR.md)
+- [Roadmap dan pengujian](docs/ROADMAP.md)
