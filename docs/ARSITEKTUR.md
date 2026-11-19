@@ -71,11 +71,11 @@ Metode tambahan mengelola lokasi model, verifikasi, unduhan, dan informasi mesin
 
 ## 5. Model dan input audio
 
-- Model: Demucs v4.1.0 HTDemucs 6-stem.
-- File: `5c90dfd2.safetensors`.
-- SHA-256: `d2a1745f0744721f6b8ca5bf469b67c651ea5ed1b52998cab033b2158609d411`.
-- Downloader streaming dan pemeriksa SHA-256 masih tersedia sebagai komponen generik, tetapi adapter Lua mematikan pemakaian HTDemucs.
-- Bobot HTDemucs 6-stem dinyatakan oleh pemelihara Demucs hanya untuk tujuan ilmiah; lihat `docs/LISENSI_MODEL.md`.
+- Model kandidat: HTDemucs 6-stem ONNX hasil ekspor StemSplitio.
+- File: `htdemucs_6s_fp16weights.onnx`, sekitar 136 MB.
+- SHA-256: `7ce55792e2231c93fbf92de95f5fd5b3a5e6c89f7db690dfd693e8f1dce56869`.
+- Verifikasi checksum, unduhan streaming, dan pemasangan model sudah disiapkan.
+- Model tetap dinonaktifkan di adapter Lua sampai dasar hak penggunaan bobot ONNX hasil konversi, termasuk penjualan terbatas, dipastikan. Lihat `docs/LISENSI_MODEL.md`.
 - Alternatif berlisensi jelas sedang dinilai.
 - MediaCodec mendekode input ke PCM float32 interleaved secara bertahap.
 - Mesin menyiapkan input menjadi stereo float32 44,1 kHz.
@@ -84,8 +84,8 @@ Metode tambahan mengelola lokasi model, verifikasi, unduhan, dan informasi mesin
 
 - Satu pemisahan aktif.
 - Satu segmen inferensi dalam satu waktu.
-- Maksimal tiga thread komputasi CPU untuk mengurangi perebutan sumber daya dengan UI dan pembaca layar.
-- Mesin mencoba Vulkan dan beralih ke CPU jika Vulkan tidak tersedia atau self-test gagal.
+- ONNX Runtime memakai dua thread intra-op dan satu thread inter-op sebagai batas awal konservatif.
+- CPU execution provider digunakan; NNAPI belum diaktifkan karena harus diuji akurasi dan stabilitasnya pada perangkat sasaran.
 - Audio mentah dan audio hasil prepare disimpan di file, bukan ditampung sebagai satu array besar.
 - File raw dan prepared dihapus setelah selesai, gagal, atau dibatalkan.
 - Hasil WAV disimpan terpisah agar dapat diputar kembali.
@@ -109,15 +109,16 @@ Pembatalan dilakukan dengan marker file dan permintaan cancel native. Pembatalan
 
 ## 8. Hasil dan aksesibilitas
 
-Enam keluaran:
+Tujuh keluaran:
 1. `vocals.wav`
 2. `drums.wav`
 3. `bass.wav`
 4. `other.wav`
 5. `guitar.wav`
 6. `piano.wav`
+7. `instrumental.wav` (jumlah lima stem non-vokal)
 
-Antarmuka memakai kontrol native `LuaDialog`, `ListView`, dan `Button`, mengikuti gaya referensi. Daftar hasil dan pemutar stem sudah disiapkan, tetapi pemisahan dinonaktifkan sementara. Hasil saat ini berada pada direktori privat CSR/Jieshuo; ekspor ke folder Musik bersama belum disediakan.
+Antarmuka memakai kontrol native `LuaDialog`, `ListView`, dan `Button`, mengikuti gaya referensi. Daftar hasil mendukung enam stem dan file instrumental, tetapi pemisahan masih dikunci oleh status lisensi model. Hasil saat ini berada pada direktori privat CSR/Jieshuo; ekspor ke folder Musik bersama belum disediakan.
 
 Label dan urutan kontrol sudah disusun untuk pembaca layar, tetapi fokus Jieshuo/CSR harus diuji langsung di perangkat. Kode tidak dapat membuktikan bahwa fokus tidak meloncat.
 
