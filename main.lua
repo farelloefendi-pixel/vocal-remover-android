@@ -20,7 +20,7 @@ import "java.lang.Runnable"
 local ctx = activity or service or this
 local ui = Handler(Looper.getMainLooper())
 local File = luajava.bindClass("java.io.File")
-local NAMA = "Vocal Remover CSR"
+local NAMA = "Vocal Remover CSR - Development"
 local EKSTENSI = {
   mp3 = true, m4a = true, aac = true, wav = true,
   flac = true, ogg = true, opus = true
