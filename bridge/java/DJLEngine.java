@@ -38,6 +38,9 @@ public final class DJLEngine {
     private static final AtomicBoolean CANCEL_DOWNLOAD = new AtomicBoolean(false);
     private static volatile boolean libraryLoaded;
     private static volatile String modelPath;
+    private static volatile String verifiedModelPath;
+    private static volatile long verifiedModelLength = -1;
+    private static volatile long verifiedModelModified = -1;
 
     private DJLEngine() {
     }
@@ -648,7 +651,15 @@ public final class DJLEngine {
     }
 
 
-    private static void verifyModel(String path) throws Exception {
+    private static synchronized void verifyModel(String path) throws Exception {
+        File model = new File(path);
+        long length = model.length();
+        long modified = model.lastModified();
+        if (path.equals(verifiedModelPath)
+                && length == verifiedModelLength
+                && modified == verifiedModelModified) {
+            return;
+        }
         final String expected = "d2a1745f0744721f6b8ca5bf469b67c651ea5ed1b52998cab033b2158609d411";
         java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
         try (java.io.FileInputStream input = new java.io.FileInputStream(path)) {
@@ -663,8 +674,14 @@ public final class DJLEngine {
             actual.append(String.format("%02x", value & 0xff));
         }
         if (!expected.equals(actual.toString())) {
+            verifiedModelPath = null;
+            verifiedModelLength = -1;
+            verifiedModelModified = -1;
             throw new IOException("Checksum model tidak cocok. Unduh ulang 5c90dfd2.safetensors.");
         }
+        verifiedModelPath = path;
+        verifiedModelLength = length;
+        verifiedModelModified = modified;
     }
 
     private static void writeStatus(File target, String state, int percent,
