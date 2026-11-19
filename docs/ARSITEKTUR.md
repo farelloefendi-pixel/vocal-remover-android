@@ -125,3 +125,12 @@ HTDemucs 6S bukan model pemisah instrumen tradisional. Rebab, suling, gender, sa
 ## 10. Status validasi
 
 Build CI mengompilasi C++ JNI, DEX, memeriksa signature JNI, memeriksa sintaks Lua, memverifikasi alignment ELF 16 KB, dan mengemas PPK development. Build berhasil bukan bukti runtime atau izin penggunaan model. Pemuatan di CSR, decode audio nyata, pemisahan enam stem, pembatalan, Vulkan/CPU, penggunaan memori, ekspor, dan aksesibilitas masih menunggu pengujian pada Redmi 13C Android 16.
+
+
+## 11. Jalur integrasi ONNX Runtime yang sedang dinilai
+
+Kandidat enam stem ONNX tidak kompatibel langsung dengan JNI Demucs yang sekarang. Integrasi memerlukan runtime ONNX Android ARM64, pemuatan model ONNX, tensor input stereo 44,1 kHz, pemrosesan segmen sekitar 7,8 detik dengan overlap-add, dan penulisan enam keluaran WAV. Jalur ini belum diimplementasikan pada paket saat ini.
+
+Pustaka ONNX Runtime Android dapat dipakai melalui API Java atau C/C++; NNAPI dapat dicoba sebagai execution provider, tetapi CPU fallback harus tersedia. Model ONNX FP16-weights sekitar 136 MB tetap harus diverifikasi checksum dan hak distribusinya. Kebutuhan RAM serta kecepatan di Apple M4 Pro yang dilaporkan penerbit tidak dapat digeneralisasi ke Redmi 13C.
+
+Sebelum jalur ONNX dinyatakan siap, build harus membuktikan: pemuatan DEX dan pustaka ORT ARM64, pembukaan model, satu inferensi uji, pemrosesan file audio panjang secara bertahap, enam WAV yang valid, pembatalan tanpa file rusak, dan pembersihan file sementara. Pengujian perangkat nyata tetap wajib.
