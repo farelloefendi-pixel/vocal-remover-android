@@ -1,0 +1,3 @@
+[submodule "third_party/demucs-android"]
+	path = third_party/demucs-android
+	url = https://github.com/jPaauwe/demucs-android.git
