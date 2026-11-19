@@ -205,10 +205,11 @@ function M.unduhModel()
       local ok, hasil = pcall(function()
         return M.panggil(kls, "unduhModel", 2, { MODEL_URL, statusUnduh })
       end)
-      if not ok then
+      if not ok or string.sub(tostring(hasil or ""), 1, 2) ~= "OK" then
+        local status = string.sub(tostring(hasil or ""), 1, 5) == "BATAL" and "batal" or "galat"
         local f = io.open(statusUnduh, "wb")
         if f then
-          f:write("galat|0|Unduhan model gagal|" .. tostring(hasil) .. "|" .. tostring(os.time() * 1000))
+          f:write(status .. "|0|Unduhan model gagal|" .. tostring(hasil) .. "|" .. tostring(os.time() * 1000))
           f:close()
         end
       end
