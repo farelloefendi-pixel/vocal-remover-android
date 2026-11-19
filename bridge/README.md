@@ -33,11 +33,12 @@ Signature dan nama ini harus dipertahankan bersama dengan tabel registrasi nativ
 1. Lua mencari DEX dan SO berdasarkan ABI, lalu menyalinnya ke direktori privat.
 2. Lua memuat kelas `DJLEngine` dengan `DexClassLoader`.
 3. Lua memanggil `muat(soPath)`; metode tersebut memanggil `System.load(absolutePath)`. JNI_OnLoad mendaftarkan native method pada kelas DEX yang sama.
-4. Lua memanggil `mulai(audioPath, workDir, jobId)`. Metode ini memulai satu Java worker thread.
-5. Worker mendekode audio melalui MediaExtractor/MediaCodec menjadi file raw interleaved float32 secara bertahap.
-6. Worker memanggil native prepare dan separation; progres ditulis ke file status.
-7. Lua membaca status secara berkala dan tetap responsif.
-8. Lua memanggil `batal(workDir, jobId)` untuk membuat marker pembatalan dan meminta pembatalan native.
+4. Lua memanggil `pasangModel(modelSourcePath)`; model disalin secara streaming ke folder privat dan checksum SHA-256 diverifikasi.
+5. Lua memanggil `mulai(audioPath, workDir, jobId)`. Metode ini memulai satu Java worker thread.
+6. Worker mendekode audio melalui MediaExtractor/MediaCodec menjadi file raw interleaved float32 secara bertahap.
+7. Worker memanggil native prepare dan separation; progres ditulis ke file status.
+8. Lua membaca status secara berkala dan tetap responsif.
+9. Lua memanggil `batal(workDir, jobId)` untuk membuat marker pembatalan dan meminta pembatalan native.
 
 Pekerjaan native dibatasi satu pada satu waktu karena pembatalan mesin upstream bersifat global.
 
