@@ -1,99 +1,64 @@
-# Roadmap pengembangan
+# Roadmap Vocal Remover — Kim Vocal 2
 
-## Tahap 0 — pemeriksaan referensi
+## Keputusan yang sudah dikunci
 
-- [x] Buka arsip PPK terbaru dan periksa seluruh daftar berkas.
-- [x] Catat pola pemuatan DEX dan SO dari Lua.
-- [x] Catat pemilihan pustaka 32/64-bit.
-- [x] Catat pemantauan progres dan pembatalan berbasis file.
-- [x] Identifikasi perbedaan kontrak PCM array pada JNI referensi.
-- [x] Periksa header DEX, kelas, field, method signature, serta native method melalui tabel DEX.
-- [ ] Dekompilasi instruksi metode DEX lebih lanjut jika dibutuhkan untuk menyamakan detail internal.
+- Produk: ekstensi Jieshuo/CSR offline untuk Android ARM64.
+- Model utama: Kim Vocal 2 MDX-Net ONNX asli.
+- Keluaran: hanya `vocals.wav` dan `instrumental.wav`.
+- Tidak memakai HTDemucs, tidak mengaktifkan enam stem, dan tidak mengganti model ke GGUF atau TFLite/LiteRT.
+- Referensi teknis dan musik wajib mengikuti `REFERENSI_DAN_KRITERIA_UJI.md`.
+- Izin tertulis komersial dari pembuat Kim Vocal 2 yang dinyatakan pengguna bertanggal 2 Oktober 2026 harus diarsipkan untuk rilis.
 
-## Tahap 1 — audit dan validasi mesin
+## Tahap 1 — kontrak model dan pengamanan
 
-- [x] Audit API C++ dan binding JNI dari repositori Demucs Android.
-- [x] Identifikasi model enam sumber, format bobot, kebutuhan build, dan checksum yang dinyatakan upstream.
-- [ ] Periksa teks lisensi dan atribusi seluruh dependensi sebelum distribusi.
-- [ ] Pastikan jalur inferensi dapat dibangun untuk Android ARM64 dalam lingkungan build yang tersedia.
-- [ ] Buat uji native minimal yang tidak bergantung pada UI.
-- [ ] Ukur penggunaan RAM, waktu, suhu, dan stabilitas pada perangkat sasaran.
+- [x] Catat nama model, checksum, sample rate, tensor, dan parameter MDX.
+- [x] Arahkan nama file Java ke `Kim_Vocal_2.onnx`.
+- [x] Ganti checksum verifikasi Java ke SHA-256 Kim Vocal 2.
+- [x] Ganti smoke test ke node `input` dan `output`, bentuk `[1,4,3072,256]`, serta pemeriksaan nilai finite.
+- [x] Blokir pemanggilan mesin pemisahan lama agar tidak dijalankan dengan model Kim Vocal 2.
+- [x] Selaraskan dokumentasi arsitektur, kualitas, referensi, dan lisensi.
+- [x] Pensiunkan workflow build lama yang membangun mesin Demucs dan menghasilkan paket yang tidak cocok.
+- [x] Tambahkan workflow validasi kompilasi Java/DEX dan sintaks Lua.
+- [ ] Pastikan workflow validasi baru berhasil.
 
-## Tahap 2 — kontrak Java DEX dan JNI
+## Tahap 2 — DSP MDX-Net
 
-- [x] Tentukan arah adaptasi: kelas Java DEX CSR menggantikan contoh binding Kotlin upstream.
-- [x] Tentukan input mesin berupa file raw float32, bukan satu array PCM besar.
-- [x] Susun kelas Java DEX awal dengan kontrak Lua `muat/mulai/batal/hidup` dan native methods upstream.
-- [x] Implementasikan rancangan worker Java asinkron; validasi runtime masih menunggu build dan uji perangkat.
-- [x] Tulis decoder MediaCodec bertahap ke file raw float32; perlu verifikasi kompilasi dan pengujian format nyata.
-- [x] Hubungkan pemanggilan separation native dan format hasil enam file; perlu uji output nyata.
-- [ ] Uji pembatalan saat decode, inferensi, dan ekspor.
-- [ ] Uji pemulihan setelah ekstensi ditutup atau proses dihentikan sistem.
+- [ ] Audit dan pilih implementasi FFT 7680 yang efisien, kompatibel Android, dan lisensinya jelas.
+- [ ] Implementasikan STFT periodic Hann, center=True, reflect padding, dan normalisasi yang sesuai referensi UVR/MDX.
+- [ ] Implementasikan pemetaan tensor empat bidang real/imaginary.
+- [ ] Terapkan penanganan bin awal sesuai referensi model.
+- [ ] Implementasikan inferensi ONNX satu segmen.
+- [ ] Implementasikan iSTFT dan normalisasi envelope.
+- [ ] Implementasikan trim, overlap-add, dan penanganan segmen terakhir tanpa kehilangan atau duplikasi sampel.
+- [ ] Validasi numerik STFT/iSTFT dan overlap terhadap implementasi referensi.
 
-## Tahap 3 — integrasi Lua CSR
+## Tahap 3 — audio dan dua keluaran
 
-- [x] Pertahankan pola pemuatan DEX/SO dari referensi pada adapter Lua.
-- [x] Buat menu pilih audio berbasis penelusuran folder dan daftar enam hasil.
-- [x] Buat layar progres dan daftar hasil dengan kontrol native yang terbaca pembaca layar; uji navigasi nyata masih tertunda.
-- [x] Tambahkan batal, pembacaan hasil, pemutaran stem, dan pembersihan pekerjaan terputus.
-- [ ] Uji fokus screen reader agar tidak meloncat ketika progres berubah.
+- [ ] Pertahankan decode MediaCodec bertahap dan resampling stereo 44,1 kHz dengan anti-aliasing.
+- [ ] Tulis `vocals.wav` dengan frame count yang benar.
+- [ ] Bentuk `instrumental.wav` sebagai residual mix dikurangi vokal yang sudah disejajarkan dan dikompensasi.
+- [ ] Validasi header, durasi, sample rate, kanal, peak, clipping, dan nilai finite.
+- [ ] Pastikan file parsial dibuang saat gagal atau dibatalkan.
+- [ ] Hanya publikasikan hasil final setelah dua WAV lolos validasi.
 
-## Tahap 4 — uji kualitas musik
+## Tahap 4 — UI dan perangkat
 
-Sampel uji:
-- Lagu Jawa dengan rebab dominan.
-- Lagu Jawa dengan rebab dan vokal bersamaan.
-- Lagu dengan suling dan gamelan.
-- Lagu dengan gender, saron, dan bonang.
-- Campuran vokal/instrumen yang padat.
-- Pop atau dangdut sebagai pembanding.
-
-Catat:
-- Apakah vokal terpisah dengan baik.
-- Apakah rebab/suling ikut terhapus atau bocor ke stem vocals.
-- Apakah enam file hasil dapat diputar.
-- Durasi pemrosesan, RAM, suhu, dan apakah CSR tetap responsif.
+- [ ] Pastikan worker tidak menjalankan inferensi atau I/O berat pada thread UI.
+- [ ] Uji progres, pembatalan, pemulihan pekerjaan, dan pembersihan file sementara.
+- [ ] Uji fokus dan navigasi pembaca layar Jieshuo/CSR.
+- [ ] Uji audio 10 detik, 1 menit, 3 menit, dan 5 menit.
+- [ ] Ukur RAM, suhu, baterai, waktu proses, dan stabilitas pada Redmi 13C.
+- [ ] Uji musik Jawa: vokal+rebab, rebab solo, suling, gender, saron, bonang, gong, kendang, dan campuran gamelan.
+- [ ] Catat apakah rebab atau suling ikut terambil ke stem vocals.
 
 ## Tahap 5 — rilis
 
-- [x] Audit lisensi kode dan dependensi; model HTDemucs ditahan karena batas lisensi bobot.
-- [ ] Audit lisensi dan atribusi model alternatif sebelum dipakai.
-- [x] Siapkan build binary ARM64 dan DEX otomatis; uji perangkat masih diperlukan.
-- [x] Tambahkan pengemasan PPK otomatis pada workflow CI; uji instalasi masih diperlukan.
-- [ ] Uji instalasi PPK, upgrade, pembatalan, ekspor hasil, dan penghapusan.
-- [ ] Rilis hanya setelah uji perangkat nyata lulus.
+- [ ] Pastikan izin tertulis Kim Vocal 2, atribusi, dan bukti hak distribusi diarsipkan.
+- [ ] Ganti seluruh langkah build Demucs lama dengan build mesin DSP Kim Vocal 2.
+- [ ] Build DEX, native ARM64, dan paket PPK baru.
+- [ ] Uji instalasi, pemuatan, pemisahan nyata, pembatalan, dan aksesibilitas.
+- [ ] Rilis hanya setelah seluruh kriteria penerimaan lulus.
 
-## Kriteria tidak boleh dilewati
+## Status saat ini
 
-Jangan menyatakan ekstensi siap pakai sebelum mesin native, model, enam keluaran, pembatalan, dan navigasi screen reader benar-benar diuji pada perangkat sasaran.
-
-## Build otomatis
-
-- [x] Tambahkan workflow GitHub Actions untuk membangun `DJLEngine.dex` dan `libdjl64.so`.
-- [x] Pastikan workflow build ARM64 lulus untuk C++ JNI dan Java DEX.
-- [x] Verifikasi output ELF AArch64 dan berkas Dalvik DEX; artefak CI berhasil diunggah.
-- [ ] Uji pemuatan DEX/SO dan pemanggilan JNI di perangkat Android nyata sebelum membuat PPK rilis; PPK yang tersedia sekarang hanya development.
-
-## Implementasi UI dan model
-
-- [x] Buat adapter Lua berdasarkan alur pemuatan dan refleksi pada PPK referensi.
-- [x] Buat antarmuka CSR development untuk pemilih audio, status model, progres, pembatalan, dan enam hasil.
-- [x] Siapkan mekanisme unduh streaming dan verifikasi SHA-256; pemakaian HTDemucs dinonaktifkan setelah audit lisensi.
-- [x] Atur pemisahan satu segmen dan maksimal tiga thread komputasi CPU.
-- [x] Tambahkan deteksi Vulkan dengan fallback CPU.
-- [ ] Uji seluruh alur di perangkat Redmi 13C / Android 16.
-- [ ] Tambahkan ekspor enam stem ke folder Musik bersama dengan izin Android yang sesuai.
-
-## Penghalang lisensi model
-
-- [x] Temukan pernyataan pemelihara Demucs bahwa bobot HTDemucs tidak tercakup MIT dan hanya untuk tujuan ilmiah.
-- [x] Nonaktifkan unduhan/pemakaian bobot HTDemucs dari adapter Lua.
-- [x] Ubah paket hasil CI menjadi PPK development, bukan rilis fungsional.
-- [ ] Pilih dan validasi model pengganti dengan lisensi bobot yang jelas.
-
-
-## Kompatibilitas Android 15/16
-
-- [x] Pastikan pustaka JNI menggunakan linker alignment 16 KB yang sudah disediakan CMake upstream.
-- [x] Tambahkan pemeriksaan program header ELF pada CI; build 19 November 2026 lulus pemeriksaan `0x4000`.
-- [ ] Verifikasi pemuatan pustaka pada perangkat sasaran dan perangkat 16 KB page-size nyata jika tersedia.
+Kontrak identitas Kim Vocal 2, checksum, dan smoke test tensor sudah disiapkan. Mesin lama diblokir. Pipeline DSP utama belum selesai. Belum ada PPK Kim Vocal 2 yang siap dipasang atau diuji sebagai produk.
