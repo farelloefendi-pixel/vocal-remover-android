@@ -38,8 +38,10 @@ jobs:
           unzip -q build-ort/onnxruntime-android.aar -d build-ort/unpacked
           test -s build-ort/unpacked/classes.jar
           test -s build-ort/unpacked/jni/arm64-v8a/libonnxruntime.so
+          test -s build-ort/unpacked/jni/arm64-v8a/libonnxruntime4j_jni.so
           cp build-ort/unpacked/jni/arm64-v8a/libonnxruntime.so dist-libonnxruntime.so
-          sha256sum build-ort/onnxruntime-android.aar dist-libonnxruntime.so
+          cp build-ort/unpacked/jni/arm64-v8a/libonnxruntime4j_jni.so dist-libonnxruntime4j_jni.so
+          sha256sum build-ort/onnxruntime-android.aar dist-libonnxruntime.so dist-libonnxruntime4j_jni.so
 
       - name: Fetch pinned Demucs C++ engine
         run: |
@@ -97,17 +99,21 @@ jobs:
           mkdir -p dist/bridge/lua dist/licenses
           cp main.lua dist/main.lua
           cp dist-libonnxruntime.so dist/libonnxruntime.so
+          cp dist-libonnxruntime4j_jni.so dist/libonnxruntime4j_jni.so
           cp bridge/lua/DJLBridge.lua dist/bridge/lua/DJLBridge.lua
           cp licenses/* dist/licenses/
-          file dist/libdjl64.so dist/libonnxruntime.so dist/DJLEngine.dex
+          file dist/libdjl64.so dist/libonnxruntime.so dist/libonnxruntime4j_jni.so dist/DJLEngine.dex
           readelf -h dist/libdjl64.so | grep -E 'Class:|Machine:'
           readelf -h dist/libonnxruntime.so | grep -E 'Class:|Machine:' | grep -q AArch64
+          readelf -h dist/libonnxruntime4j_jni.so | grep -E 'Class:|Machine:' | grep -q AArch64
           readelf -l dist/libdjl64.so | tee dist/ELF_PROGRAM_HEADERS.txt
           readelf -l dist/libonnxruntime.so | tee dist/ORT_ELF_PROGRAM_HEADERS.txt
+          readelf -l dist/libonnxruntime4j_jni.so | tee dist/ORT_JNI_ELF_PROGRAM_HEADERS.txt
           grep -q '0x4000' dist/ELF_PROGRAM_HEADERS.txt
           grep -q '0x4000' dist/ORT_ELF_PROGRAM_HEADERS.txt
-          sha256sum dist/libdjl64.so dist/libonnxruntime.so dist/DJLEngine.dex | tee dist/SHA256SUMS.txt
-          (cd dist && zip -q -r Vocal_Remover_CSR_DEV.ppk main.lua DJLEngine.dex libdjl64.so libonnxruntime.so bridge/lua/DJLBridge.lua licenses)
+          grep -q '0x4000' dist/ORT_JNI_ELF_PROGRAM_HEADERS.txt
+          sha256sum dist/libdjl64.so dist/libonnxruntime.so dist/libonnxruntime4j_jni.so dist/DJLEngine.dex | tee dist/SHA256SUMS.txt
+          (cd dist && zip -q -r Vocal_Remover_CSR_DEV.ppk main.lua DJLEngine.dex libdjl64.so libonnxruntime.so libonnxruntime4j_jni.so bridge/lua/DJLBridge.lua licenses)
           unzip -l dist/Vocal_Remover_CSR_DEV.ppk
           cat > dist/BUILD_INFO.txt <<'EOF'
           Product: CSR/Jieshuo Vocal Remover native bridge
