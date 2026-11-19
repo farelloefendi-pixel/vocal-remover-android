@@ -1,178 +1,85 @@
-# Arsitektur teknis Vocal Remover CSR
+# Arsitektur Vocal Remover CSR — status Kim Vocal 2
 
-## 1. Bentuk produk
+## Produk
 
-Produk akhir adalah ekstensi CSR/Jieshuo dalam paket PPK. Tidak ada APK mandiri. Lua mengelola menu dan navigasi, Java DEX menghubungkan API Android dengan JNI, dan C++ menjalankan pemisahan audio.
+Ekstensi Jieshuo/CSR Android ARM64. Antarmuka dan pengelolaan tugas menggunakan Lua; Java menjadi penghubung Android dan ONNX Runtime. Mesin pemisahan final harus menjalankan Kim Vocal 2 MDX-Net ONNX asli.
 
-## 2. Struktur paket PPK
+Hasil produk hanya:
+- `vocals.wav`
+- `instrumental.wav`
 
-Paket yang dibuat CI berisi:
-- `main.lua`
-- `DJLEngine.dex`
-- `libdjl64.so` untuk ABI ARM64 (mesin Demucs prototipe)
-- `libonnxruntime.so` dan `libonnxruntime4j_jni.so` untuk ABI ARM64 (ONNX Runtime Android 1.32.0)
-- `bridge/lua/DJLBridge.lua`
+HTDemucs enam stem yang masih ada di sebagian kode/build lama adalah peninggalan prototipe dan tidak boleh dipakai untuk menghasilkan keluaran produk.
 
-Model HTDemucs tidak dibundel dan saat ini tidak diunduh atau digunakan. Integrasi model ditahan sampai hak penggunaan bobot jelas.
-
-## 3. Lapisan sistem
+## Alur target
 
 ```text
-CSR / Jieshuo
+Jieshuo / CSR
   main.lua
-    - menu dan pemilih audio
-    - dialog progres dan pembatalan
-    - pemulihan tugas dan daftar hasil
-        |
-        v
-  bridge/lua/DJLBridge.lua
-    - mencari DEX dan SO
-    - DexClassLoader
-    - refleksi metode statis
-    - status tugas berbasis file
-        |
-        v
-  DJLEngine.dex (Java + API ONNX Runtime)
-    - System.load pustaka native C++ lama
-    - memuat kedua pustaka ONNX Runtime melalui properti jalur native eksplisit
-    - inisialisasi OrtEnvironment dan sesi model ONNX
-    - unduh model streaming + checksum
-    - MediaExtractor / MediaCodec
-    - worker tunggal
-    - progres dan pembatalan
-        |
-        v
-  libdjl64.so (C++ / JNI)
-    - fold channel dan resampling stereo float32 44,1 kHz
-
-  ONNX Runtime Android (Java)
-    - inferensi CPU satu segmen 7,8 detik
-    - overlap-add streaming enam stem
-    - enam WAV stem dan satu WAV instrumental
+    pemilih audio, status, pembatalan, aksesibilitas
+       |
+       v
+  DJLBridge.lua
+    pemuatan DEX/SO, worker, status dan hasil
+       |
+       v
+  DJLEngine.dex
+    decode audio Android
+    resample stereo 44.1 kHz
+    STFT MDX / FFT 7680
+    susun tensor [1,4,3072,256]
+    inferensi ONNX Runtime
+    iSTFT, overlap-add, kompensasi
+    tulis vocals.wav
+    instrumental = mix - vocals
+       |
+       v
+  ONNX Runtime Android ARM64
+    Kim_Vocal_2.onnx
 ```
 
-## 4. Kesesuaian dengan PPK referensi
+Diagram di atas adalah arsitektur sasaran. Tidak semua tahap DSP sudah diimplementasikan.
 
-Pola Lua direplikasi dari `main.lua` PPK referensi:
-1. `DJL.base` digunakan untuk mencari file mesin di folder ekstensi.
-2. `DJLEngine.dex` dan pustaka SO dipilih berdasarkan ABI.
-3. File disalin ke direktori cache privat.
-4. Kelas dimuat dengan `DexClassLoader(dexPath, optimizedDir, ortFolder, ctx.getClassLoader())`. Java menetapkan properti path eksplisit untuk `libonnxruntime.so` dan `libonnxruntime4j_jni.so` sebelum memanggil `OrtEnvironment.getEnvironment()`.
-5. Kelas disimpan pada `System.getProperties()` agar tidak dibuat ulang setiap kali fungsi dipanggil.
-6. Metode Java statis dipanggil menggunakan `getDeclaredMethod` dan `invoke`.
-7. Worker menulis status ke file; Lua membaca status melalui Handler.
-8. ID pekerjaan disimpan agar ekstensi dapat melanjutkan pemantauan setelah dibuka kembali.
+## Kontrak model yang dipatok
 
-Kontrak inti yang sama:
-- `muat(String soPath, String ortDirectory)`
-- `mulai(String audioPath, String workDir, String jobId)`
-- `batal(String workDir, String jobId)`
-- `hidup(String jobId)`
+- File: `Kim_Vocal_2.onnx`
+- SHA-256: `ce74ef3b6a6024ce44211a07be9cf8bc6d87728cc852a68ab34eb8e58cde9c8b`
+- Sample rate: 44.100 Hz stereo
+- Node input/output: `input` / `output`
+- Bentuk input/output: `[1,4,3072,256]`, float32
+- `n_fft=7680`, `hop_length=1024`, `dim_f=3072`, `dim_t=256`
 
-Metode tambahan mengelola lokasi model, verifikasi, unduhan, dan informasi mesin.
+Empat bidang tensor adalah real kiri, imajiner kiri, real kanan, dan imajiner kanan. Pemrosesan harus mengikuti konvensi STFT/iSTFT MDX yang sesuai model.
 
-## 5. Model dan input audio
+## Status lapisan
 
-- Model kandidat: HTDemucs 6-stem ONNX hasil ekspor StemSplitio.
-- File: `htdemucs_6s_fp16weights.onnx`, sekitar 136 MB.
-- SHA-256: `7ce55792e2231c93fbf92de95f5fd5b3a5e6c89f7db690dfd693e8f1dce56869`.
-- Verifikasi checksum, unduhan streaming, dan pemasangan model sudah disiapkan.
-- Model tetap dinonaktifkan di adapter Lua sampai dasar hak penggunaan bobot ONNX hasil konversi, termasuk penjualan terbatas, dipastikan. Lihat `docs/LISENSI_MODEL.md`.
-- Alternatif berlisensi jelas sedang dinilai.
-- MediaCodec mendekode input ke PCM float32 interleaved secara bertahap.
-- Mesin menyiapkan input menjadi stereo float32 44,1 kHz.
+### Lua
+UI sudah diselaraskan dengan dua keluaran. Model masih dinonaktifkan di adapter sampai pipeline dan validasi siap.
 
-## 6. Batas memori dan komputasi
+### Java
+Nama file model, checksum, dan smoke test tensor telah diarahkan ke Kim Vocal 2. Fungsi mulai pemisahan sengaja mengembalikan pesan belum selesai agar kode lama tidak berjalan secara keliru.
 
-- Satu pemisahan aktif.
-- Satu segmen inferensi dalam satu waktu.
-- ONNX Runtime memakai dua thread intra-op dan satu thread inter-op sebagai batas awal konservatif.
-- CPU execution provider digunakan; NNAPI belum diaktifkan karena harus diuji akurasi dan stabilitasnya pada perangkat sasaran.
-- Audio mentah dan audio hasil prepare disimpan di file, bukan ditampung sebagai satu array besar.
-- File raw dan prepared dihapus setelah selesai, gagal, atau dibatalkan.
-- Hasil WAV disimpan terpisah agar dapat diputar kembali.
+### Native dan workflow
+Workflow masih mengambil dan membangun proyek Demucs Android lama. Langkah tersebut belum cocok dengan arsitektur Kim Vocal 2 dan harus diganti setelah FFT/DSP baru dipilih serta diimplementasikan. Jangan mengemas artefak workflow lama sebagai rilis.
 
-Angka ini adalah konfigurasi awal konservatif untuk perangkat RAM 6 GB; penggunaan RAM, waktu, dan suhu harus diukur langsung.
+## Kinerja dan aksesibilitas
 
-## 7. Status dan lifecycle
+- Inferensi dan I/O harus berjalan di worker latar depan/worker terkelola, bukan thread UI.
+- Satu pekerjaan aktif, pembatalan kooperatif, dan pembersihan file sementara.
+- Progres diumumkan secara terbatas agar pembaca layar tidak dibanjiri.
+- Fokus Jieshuo/CSR harus tetap dapat dinavigasi dan diuji langsung pada perangkat sasaran.
+- Target perangkat: Redmi 13C ARM64, RAM 6 GB. Kebutuhan RAM dan waktu proses belum diukur pada perangkat.
 
-Status file memakai format:
-`state|percent|stage|message|timestamp`
+## Referensi
 
-State:
-- `jalan`
-- `selesai`
-- `galat`
-- `batal`
+Lihat [REFERENSI_DAN_KRITERIA_UJI.md](REFERENSI_DAN_KRITERIA_UJI.md) untuk referensi Demucs, UVR, ONNX Runtime, ncnn, MUSDB18, Slakh2100, dan referensi musik Jawa.
 
-Lua membaca status setiap 400–500 ms dan hanya memperbarui pesan ketika teks berubah. Jika ekstensi dibuka kembali saat worker masih hidup, pemantauan dilanjutkan. Jika proses sudah mati dan tugas belum selesai, file sementara dan hasil parsial dibersihkan.
+## Kriteria sebelum rilis
 
-Pembatalan dilakukan dengan marker file dan permintaan cancel native. Pembatalan bersifat kooperatif: worker berhenti ketika mencapai pemeriksaan atau callback progres berikutnya.
-
-## 8. Hasil dan aksesibilitas
-
-Tujuh keluaran:
-1. `vocals.wav`
-2. `drums.wav`
-3. `bass.wav`
-4. `other.wav`
-5. `guitar.wav`
-6. `piano.wav`
-7. `instrumental.wav` (jumlah lima stem non-vokal)
-
-Antarmuka memakai kontrol native `LuaDialog`, `ListView`, dan `Button`, mengikuti gaya referensi. Daftar hasil mendukung enam stem dan file instrumental, tetapi pemisahan masih dikunci oleh status lisensi model. Hasil saat ini berada pada direktori privat CSR/Jieshuo; ekspor ke folder Musik bersama belum disediakan.
-
-Label dan urutan kontrol sudah disusun untuk pembaca layar, tetapi fokus Jieshuo/CSR harus diuji langsung di perangkat. Kode tidak dapat membuktikan bahwa fokus tidak meloncat.
-
-## 9. Batas model musik
-
-HTDemucs 6S bukan model pemisah instrumen tradisional. Rebab, suling, gender, saron, bonang, dan instrumen lain bisa masuk ke stem vocals, other, atau kategori lain. Pengujian sampel musik Jawa diperlukan sebelum membuat klaim kualitas.
-
-## 10. Status validasi
-
-Workflow CI dirancang mengompilasi C++ JNI dan DEX, memeriksa signature JNI, sintaks Lua, dua library ONNX Runtime, alignment ELF 16 KB, lalu mengemas PPK development. Perubahan streaming terbaru belum memiliki hasil build yang diverifikasi. Pemuatan di CSR, decode audio nyata, inferensi enam stem, pembatalan, penggunaan memori, ekspor, dan aksesibilitas masih menunggu pengujian pada Redmi 13C Android 16.
-
-
-
-### 11.1 Kontrak inferensi ONNX 6-stem dan pemrosesan streaming
-
-Model HTDemucs 6S ONNX yang sedang dievaluasi mempunyai kontrak tetap:
-- Input bernama mix, bentuk [1, 2, 343980], float32, stereo planar, 44.100 Hz.
-- Output bernama stems, bentuk [1, 6, 2, 343980], float32.
-- Model yang dipatok untuk uji: `htdemucs_6s_fp16weights.onnx`, 136 MB, SHA-256 `7ce55792e2231c93fbf92de95f5fd5b3a5e6c89f7db690dfd693e8f1dce56869`.
-- Urutan baris output: drums, bass, other, vocals, guitar, piano.
-- Panjang segmen 7,8 detik; overlap 25 persen (85.995 sampel); stride 257.985 sampel. Jendela referensi memakai fade linear 0→1 pada awal dan 1→0 pada akhir segmen, bukan jendela Hann.
-
-Sumber rujukan: model card dan skrip infer.py pada repositori StemSplitio. Skrip tersebut melakukan zero-padding untuk segmen terakhir, menerapkan jendela transisi pada tepi segmen, lalu menormalisasi jumlah bobot overlap. Detail ini harus direplikasi, bukan diganti dengan pemotongan segmen tanpa blending.
-
-Implementasi Android sekarang memakai overlap-add streaming dan tidak menampung seluruh output lagu dalam array [6, 2, totalSamples]:
-1. Baca satu segmen input dari file PCM siap-pakai, lalu susun tensor channel-first.
-2. Jalankan satu inferensi dan validasi nama serta dimensi output.
-3. Campurkan kontribusi segmen dengan jendela transisi ke buffer keluaran bergulir untuk enam stem.
-4. Tulis bagian buffer yang sudah tidak mungkin disentuh segmen berikutnya ke WAV sementara, kemudian pertahankan hanya ekor overlap untuk iterasi selanjutnya.
-5. Pada segmen terakhir, normalisasi bobot, tulis sisa buffer, tutup ketujuh WAV, lalu validasi header, ukuran, dan durasi.
-6. Batalkan secara kooperatif di antara segmen dan saat menulis; hapus ketujuh keluaran parsial jika batal atau gagal.
-
-Dengan cara ini, memori kerja audio dapat dibatasi pada satu input segmen, satu output segmen, buffer overlap enam stem, dan memori internal ONNX Runtime. Ini belum menjamin perangkat cukup kuat: alokasi internal model, thread pool, dan cache tetap harus diukur pada perangkat sasaran. Model FP16-weights tetap menghasilkan tensor float32 saat inferensi menurut model card; ukuran file 136 MB tidak boleh dianggap sebagai RAM yang dibutuhkan.
-
-### 11.2 Kriteria penerimaan ONNX Runtime
-
-- ORT Android ARM64 dan DEX dimuat melalui jalur classloader yang sama tanpa merusak aksesibilitas UI.
-- Sesi model dibuka dengan satu thread inferensi awal, optimisasi graph, dan CPU execution provider sebagai fallback wajib. NNAPI hanya opsi setelah uji perangkat membuktikan stabil dan akurat.
-- Uji tensor sintetis memverifikasi bentuk input/output dan nilai finite sebelum file audio digunakan.
-- Audio input mono diduplikasi ke stereo; multichannel dilipat ke stereo dengan aturan yang diuji. Resampling ke 44,1 kHz harus memiliki anti-aliasing dan mempertahankan durasi.
-- Uji audio nyata menghasilkan tepat enam WAV stem ditambah instrumental PCM stereo 44,1 kHz dengan panjang sama dan tanpa NaN/Inf.
-- Uji durasi 10 detik, 1 menit, dan 3 menit memeriksa lonjakan RAM, waktu, suhu, progres, pembatalan, serta file sementara.
-- Uji aksesibilitas memastikan progres tidak membanjiri pembaca layar, fokus tidak pindah ke area lain, dan tombol batal tetap dapat dijangkau.
-
-Status: runtime ONNX, pembukaan sesi, inferensi per segmen, overlap-add streaming, writer enam WAV, dan writer instrumental sudah ditulis. Metode smoke test juga memeriksa bentuk tensor serta nilai finite. Semua ini masih menunggu kompilasi CI dan pengujian runtime nyata. Model tetap dinonaktifkan karena dasar lisensi bobot ONNX hasil konversi belum dapat dipastikan.
-
-## 12. Jalur integrasi ONNX Runtime yang sedang dinilai
-
-Kandidat enam stem ONNX tidak kompatibel langsung dengan JNI Demucs lama. Runtime Android, dua library native, kelas Java, pembukaan sesi, inferensi per segmen, overlap-add streaming, dan penulisan tujuh WAV sudah ditulis. Kompilasi CI dan uji perangkat masih diperlukan.
-
-ONNX Runtime Android 1.32.0 kini ditambahkan sebagai dependensi AAR resmi Maven Central. Workflow mengambil versi yang dipatok, mengekstrak kelas Java dan kedua pustaka ARM64, menggabungkan kelas API ONNX ke DEX, serta memasukkan kedua library ke paket. Java menetapkan path eksplisit untuk keduanya sebelum runtime diinisialisasi. DJLEngine menetapkan jalur kedua pustaka native secara eksplisit sebelum memanggil OrtEnvironment.getEnvironment(). Metode ujiModelEnamStem membuka sesi ONNX, memastikan node mix/stems, menjalankan tensor nol berukuran [1,2,343980], lalu memeriksa 4.127.760 nilai output float agar finite. Ini adalah smoke test satu segmen, bukan pemisahan lagu nyata.
-
-Kode jalur ONNX kini mencakup pembukaan sesi model, validasi nama dan bentuk tensor, inferensi satu segmen, pemrosesan streaming seluruh durasi, penulisan WAV enam stem, dan instrumental. Mesin C++ lama hanya dipakai untuk menyiapkan/resampling PCM; inferensi tidak lagi memakai model safetensors atau nativeSeparate. Model ONNX FP16-weights sekitar 136 MB diverifikasi dengan SHA-256 yang dipatok, tetapi hak distribusi dan penggunaan komersialnya tetap harus dipastikan. Kebutuhan RAM serta kecepatan di Apple M4 Pro yang dilaporkan penerbit tidak dapat digeneralisasi ke Redmi 13C.
-
-CI memeriksa keberadaan kelas OrtEnvironment di DEX, memastikan kedua pustaka ONNX Runtime berarsitektur AArch64, dan memeriksa alignment halaman ELF 16 KB pada keduanya. Pemeriksaan tersebut hanya validasi paket/kompilasi; belum membuktikan runtime dapat dimuat di CSR pada perangkat. Sebelum jalur ONNX dinyatakan siap, build dan uji perangkat harus membuktikan pembukaan model, satu inferensi uji, pemrosesan file audio panjang secara bertahap, tujuh WAV yang valid, pembatalan tanpa file rusak, dan pembersihan file sementara. Pengujian perangkat nyata tetap wajib.
+1. FFT 7680 dan STFT/iSTFT diuji numerik terhadap implementasi referensi.
+2. Tensor Kim Vocal 2 lolos inferensi nyata.
+3. File 10 detik, 1 menit, dan beberapa menit diproses tanpa celah, duplikasi, atau pergeseran.
+4. Dua WAV PCM valid, durasi sama dengan sumber setelah resampling yang terdefinisi, dan instrumental residual tidak mengalami clipping yang tidak terkendali.
+5. Pembatalan menghapus keluaran parsial dan file sementara.
+6. RAM, suhu, waktu, dan stabilitas diuji pada perangkat sasaran.
+7. Navigasi pembaca layar diuji langsung.
+8. Hak model, kode, pustaka, dan atribusi diverifikasi.
