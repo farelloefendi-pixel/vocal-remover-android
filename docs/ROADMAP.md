@@ -75,8 +75,15 @@ Jangan menyatakan ekstensi siap pakai sebelum mesin native, model, enam keluaran
 
 - [x] Buat adapter Lua berdasarkan alur pemuatan dan refleksi pada PPK referensi.
 - [x] Buat antarmuka CSR awal untuk pemilih audio, unduhan model, progres, pembatalan, dan enam hasil.
-- [x] Unduh model secara streaming di worker Java dan verifikasi SHA-256.
+- [x] Siapkan mekanisme unduh streaming dan verifikasi SHA-256; pemakaian HTDemucs dinonaktifkan setelah audit lisensi.
 - [x] Atur pemisahan satu segmen dan maksimal tiga thread komputasi CPU.
 - [x] Tambahkan deteksi Vulkan dengan fallback CPU.
 - [ ] Uji seluruh alur di perangkat Redmi 13C / Android 16.
 - [ ] Tambahkan ekspor enam stem ke folder Musik bersama dengan izin Android yang sesuai.
+
+## Penghalang lisensi model
+
+- [x] Temukan pernyataan pemelihara Demucs bahwa bobot HTDemucs tidak tercakup MIT dan hanya untuk tujuan ilmiah.
+- [x] Nonaktifkan unduhan/pemakaian bobot HTDemucs dari adapter Lua.
+- [x] Ubah paket hasil CI menjadi PPK development, bukan rilis fungsional.
+- [ ] Pilih dan validasi model pengganti dengan lisensi bobot yang jelas.
