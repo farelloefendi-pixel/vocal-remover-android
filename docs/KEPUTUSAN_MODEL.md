@@ -28,6 +28,50 @@ Tujuan awal proyek tetap enam stem: vocals, drums, bass, other, guitar, dan pian
 
 Tidak ada jalur yang diaktifkan otomatis. Sampai keputusan dan pengujian selesai, paket PPK tetap development-only dan tidak menghasilkan WAV.
 
+
+
+## Penilaian mutu khusus produk komersial
+
+Kualitas vokal dan kualitas enam stem adalah dua sasaran berbeda. Dokumentasi benchmark penerbit StemSplit untuk HTDemucs menunjukkan HTDemucs 6S mempunyai median SDR vokal sekitar 8,5 dB pada MUSDB18-HQ, sedangkan HTDemucs FT empat stem sekitar 9,19 dB. Penerbit juga menjelaskan bahwa 6S menambah kepala gitar dan piano sehingga karakter stem other berubah dan SDR vokal/other lebih rendah. Ini bukan hasil uji independen dan bukan jaminan kualitas pada lagu Indonesia, tetapi cukup untuk mencegah asumsi keliru bahwa model enam stem otomatis menjadi model penghapus vokal terbaik.
+
+Sumber: https://github.com/StemSplit/demucs-onnx/blob/main/docs/models.md
+
+Untuk produk ini, rencana evaluasi mutu harus mengukur dua keluaran terpisah:
+1. **Karaoke/instrumental:** residu vokal pada instrumental serendah mungkin, tanpa merusak transien drum, bass, dan instrumen.
+2. **Enam stem:** kebocoran vokal ke stem instrumen, kebocoran instrumen ke vocals, konsistensi fase/waktu, artefak, dan apakah keenam stem dapat dijumlahkan kembali mendekati campuran sumber.
+
+Jangan menganggap stem guitar/piano yang terpisah sebagai bukti vokal sudah terhapus optimal. Jika evaluasi berlisensi kelak menunjukkan model vocal-specialist lebih bersih daripada model enam stem, arsitektur dapat menyediakan dua tahap atau dua mode: mode Karaoke berkualitas tinggi dan mode Pisahkan Enam Stem. Namun, model tambahan hanya boleh dipakai setelah hak komersial bobotnya terbukti, ukuran memori terukur, dan hasil gabungan tidak menimbulkan artefak atau ketidaksinkronan.
+
+### Dataset uji mutu wajib
+
+Gunakan hanya audio yang dibuat sendiri, direkam dengan izin, atau memiliki lisensi yang mengizinkan pengujian produk komersial. Siapkan pasangan campuran dan stem sumber asli agar hasil dapat dinilai secara objektif. Dataset harus mencakup:
+- pop Indonesia: vokal pria/wanita, backing vocal, reverb, chorus, dan vokal berlapis;
+- dangdut/koplo: kendang, bass, keyboard, gitar, suling, dan vokal;
+- musik Jawa: rebab solo, rebab bersama vokal, suling, gender, saron, bonang, gong, dan campuran gamelan;
+- kasus sulit: vokal tanpa jeda, vokal berbisik/rap, falsetto, suara manusia latar, serta instrumen yang spektrumnya menyerupai suara manusia.
+
+### Kriteria penerimaan mutu
+
+- Semua enam keluaran harus mempunyai durasi, sample rate, channel count, dan sinkronisasi yang sama.
+- Tidak boleh ada segmen awal/akhir yang hilang, jeda buatan, klik sambungan, atau perubahan gain mendadak akibat overlap-add.
+- Nilai SDR/SI-SDR dan leakage dihitung terhadap stem sumber pada dataset berlisensi; hasil dengar buta juga dilakukan karena metrik numerik tidak sepenuhnya menggambarkan artefak musik.
+- Rebab/suling/gamelan solo tidak boleh secara sistematis dipindahkan ke vocals. Kasus rebab bersama penyanyi harus dinilai terpisah.
+- Untuk mode Karaoke, bandingkan instrumental hasil pemisahan dengan sumber instrumental asli, bukan hanya menilai seberapa kecil suara penyanyi.
+- Lakukan uji lagu 5 menit dan beberapa genre, bukan hanya potongan pendek.
+
+Tidak ada model yang dinyatakan siap jual hanya berdasarkan benchmark penerbit atau hasil satu lagu. Perlu pengujian pada perangkat sasaran dan dataset yang mewakili penggunaan pelanggan.
+
+## Gerbang rilis komersial
+
+Rilis berbayar dilarang diaktifkan sebelum seluruh poin ini terpenuhi:
+- izin komersial untuk kode, bobot, konversi ONNX, dan dependensi native telah didokumentasikan secara terpisah;
+- provenance dan izin dataset pelatihan model dapat diterima, atau ada lisensi/izin eksplisit dari pemegang hak model;
+- seluruh atribusi, notice, kewajiban redistribusi, dan batas penggunaan dipenuhi;
+- tidak ada materi lagu contoh atau dataset uji tanpa izin yang disertakan dalam paket;
+- pengujian mutu, stabilitas, keamanan file, performa, panas, dan aksesibilitas selesai.
+
+Jika izin bobot enam stem tidak bisa diperoleh, jalur yang benar untuk produk komersial adalah mencari model dengan hak komersial tertulis atau melatih model sendiri dari dataset yang memang berlisensi untuk penggunaan tersebut. Mengubah format bobot menjadi ONNX tidak menghapus kewajiban lisensi model asal.
+
 ## Sumber primer dan teknis
 
 - [Pernyataan pemelihara Demucs tentang bobot pretrained](https://github.com/facebookresearch/demucs/issues/327#issuecomment-1134828611)
