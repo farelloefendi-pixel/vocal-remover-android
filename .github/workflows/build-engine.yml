@@ -102,7 +102,9 @@ jobs:
           readelf -h dist/libdjl64.so | grep -E 'Class:|Machine:'
           readelf -h dist/libonnxruntime.so | grep -E 'Class:|Machine:' | grep -q AArch64
           readelf -l dist/libdjl64.so | tee dist/ELF_PROGRAM_HEADERS.txt
+          readelf -l dist/libonnxruntime.so | tee dist/ORT_ELF_PROGRAM_HEADERS.txt
           grep -q '0x4000' dist/ELF_PROGRAM_HEADERS.txt
+          grep -q '0x4000' dist/ORT_ELF_PROGRAM_HEADERS.txt
           sha256sum dist/libdjl64.so dist/libonnxruntime.so dist/DJLEngine.dex | tee dist/SHA256SUMS.txt
           (cd dist && zip -q -r Vocal_Remover_CSR_DEV.ppk main.lua DJLEngine.dex libdjl64.so libonnxruntime.so bridge/lua/DJLBridge.lua licenses)
           unzip -l dist/Vocal_Remover_CSR_DEV.ppk
