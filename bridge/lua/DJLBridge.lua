@@ -124,7 +124,7 @@ end
 function M.siapkan()
   if not ctx then return nil, "Context CSR belum diinisialisasi" end
   local properties = System.getProperties()
-  local tersimpan = properties.get("vocalremover.kelas.ort132.v2")
+  local tersimpan = properties.get("vocalremover.kimmdx.ort131.v3")
   if tersimpan ~= nil then
     kelas = tersimpan
     return kelas
@@ -180,7 +180,7 @@ function M.siapkan()
   end
 
   kelas = hasil
-  properties.put("vocalremover.kelas.ort132.v2", kelas)
+  properties.put("vocalremover.kimmdx.ort131.v3", kelas)
   return kelas, pesan
 end
 
