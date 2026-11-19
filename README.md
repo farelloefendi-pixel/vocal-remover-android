@@ -15,7 +15,7 @@ Proyek **ekstensi CSR/Jieshuo** untuk memisahkan audio musik secara offline di A
 
 ## Perangkat sasaran
 
-Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal dibatasi satu segmen dan maksimal tiga thread komputasi CPU. Mesin mencoba Vulkan bila tersedia dan menggunakan CPU jika GPU tidak dapat digunakan.
+Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal memakai satu segmen inferensi, dua thread intra-op, satu thread inter-op, dan CPU. NNAPI belum diaktifkan sebelum uji perangkat membuktikan stabilitas dan akurasi.
 
 ## Struktur implementasi
 
@@ -34,7 +34,7 @@ Artefak yang tertaut di atas adalah build development sebelumnya. Perubahan ONNX
 
 ## Status model
 
-Mesin C++ HTDemucs yang ada belum menjadi jalur pemisahan aktif. ONNX Runtime Android 1.32.0 serta dua library native ARM64 sudah dimasukkan dalam workflow build. Bridge mengatur path keduanya sebelum membuat OrtEnvironment. Metode smoke test satu segmen memeriksa nama node, bentuk tensor, dan nilai output; belum ada hasil eksekusi pada perangkat. Kandidat HTDemucs 6S ONNX (136 MB, enam stem) belum diaktifkan karena hak penggunaan bobot hasil konversi belum dapat dipastikan. Pipeline inferensi streaming dan writer enam WAV plus instrumental sudah ditulis, tetapi belum dikompilasi ulang dan diuji pada perangkat. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan [perbandingan kandidat](docs/KEPUTUSAN_MODEL.md).
+Mesin C++ HTDemucs yang ada belum menjadi jalur pemisahan aktif. ONNX Runtime Android 1.32.0 serta dua library native ARM64 sudah dimasukkan dalam workflow build. Bridge mengatur path keduanya sebelum membuat OrtEnvironment. Metode smoke test satu segmen memeriksa nama node, bentuk tensor, dan nilai output; belum ada hasil eksekusi pada perangkat. Kandidat HTDemucs 6S ONNX (136 MB, enam stem) belum diaktifkan karena hak penggunaan bobot hasil konversi belum dapat dipastikan. Pipeline inferensi streaming dan writer enam WAV stem plus instrumental sudah ditulis, tetapi belum dikompilasi ulang dan diuji pada perangkat. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan [perbandingan kandidat](docs/KEPUTUSAN_MODEL.md).
 
 ## Standar mutu dan rilis komersial
 
@@ -43,7 +43,7 @@ Target mutu mencakup penghapusan vokal sepanjang lagu dan enam stem yang sinkron
 ## Batas validasi
 
 - Build CI membuktikan kode dapat dikompilasi dan dikemas; itu belum membuktikan pemisahan audio berhasil di Redmi 13C.
-- Pemuatan DEX/SO, JNI, MediaCodec, Vulkan/CPU, pembatalan, dan pemulihan masih perlu uji perangkat nyata.
+- Pemuatan DEX/SO, JNI, MediaCodec, inferensi ONNX CPU, pembatalan, pemulihan, penggunaan RAM, suhu, dan aksesibilitas masih perlu uji perangkat nyata.
 - Build development saat ini belum menghasilkan stem. Ekspor ke folder Musik bersama masih perlu diselesaikan.
 - HTDemucs 6S tidak memiliki stem rebab khusus. Rebab, suling, gender, saron, bonang, dan instrumen tradisional lain harus diuji; tidak ada jaminan semuanya akan selalu terpisah sempurna.
 
