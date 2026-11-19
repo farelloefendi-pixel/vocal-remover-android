@@ -488,14 +488,14 @@ public final class DJLEngine {
     }
 
     private static final int ONNX_SAMPLES = MDXNetDSP.CHUNK;
-    private static final int ONNX_OVERLAP = 0;
-    private static final int ONNX_STRIDE = MDXNetDSP.GEN;
+    private static final int ONNX_OVERLAP = MDXNetDSP.BORDER;
+    private static final int ONNX_STRIDE = MDXNetDSP.STEP;
     private static volatile OrtSession.RunOptions activeRunOptions;
 
     private static final class WavPcm16Writer implements AutoCloseable {
         private final File file;
         private final BufferedOutputStream stream;
-        private final byte[] bytes = new byte[ONNX_STRIDE * 4];
+        private final byte[] bytes = new byte[ONNX_SAMPLES * 4];
         private long frames;
         private boolean closed;
 
@@ -596,9 +596,10 @@ public final class DJLEngine {
         }
         final long total = bytes / 8L;
         if (total < 44100L) throw new IOException("Audio lebih pendek dari satu detik");
-        final long pad = MDXNetDSP.GEN - (total % MDXNetDSP.GEN);
-        final long paddedLength = total + pad;
-        final long chunks = paddedLength / MDXNetDSP.GEN;
+        final long paddedLength = total + 2L * MDXNetDSP.BORDER;
+        final long chunks = paddedLength <= MDXNetDSP.CHUNK ? 1L
+                : ((paddedLength - MDXNetDSP.CHUNK + MDXNetDSP.STEP - 1L)
+                        / MDXNetDSP.STEP) + 1L;
 
         OrtSession.SessionOptions options = new OrtSession.SessionOptions();
         options.setIntraOpNumThreads(2);
@@ -627,15 +628,19 @@ public final class DJLEngine {
 
             float[] window = MDXNetDSP.createWindow();
             float[] envelope = MDXNetDSP.createEnvelope(window);
+            float[] blendWindow = MDXNetDSP.createBlendWindow();
             MDXNetDSP.BluesteinFFT fft = new MDXNetDSP.BluesteinFFT(MDXNetDSP.N_FFT);
             float[] left = new float[MDXNetDSP.CHUNK];
             float[] right = new float[MDXNetDSP.CHUNK];
             float[] vocalLeft = new float[MDXNetDSP.CHUNK];
             float[] vocalRight = new float[MDXNetDSP.CHUNK];
-            float[] vocalOutLeft = new float[MDXNetDSP.GEN];
-            float[] vocalOutRight = new float[MDXNetDSP.GEN];
-            float[] instrumentalOutLeft = new float[MDXNetDSP.GEN];
-            float[] instrumentalOutRight = new float[MDXNetDSP.GEN];
+            float[] accumulatedLeft = new float[MDXNetDSP.CHUNK];
+            float[] accumulatedRight = new float[MDXNetDSP.CHUNK];
+            float[] accumulatedEnvelope = new float[MDXNetDSP.CHUNK];
+            float[] vocalOutLeft = new float[MDXNetDSP.CHUNK];
+            float[] vocalOutRight = new float[MDXNetDSP.CHUNK];
+            float[] instrumentalOutLeft = new float[MDXNetDSP.CHUNK];
+            float[] instrumentalOutRight = new float[MDXNetDSP.CHUNK];
             byte[] audioBlock = new byte[MDXNetDSP.CHUNK * 8];
             ByteBuffer tensorMemory = ByteBuffer.allocateDirect(MDXNetDSP.TENSOR_SIZE * 4)
                     .order(ByteOrder.nativeOrder());
@@ -645,8 +650,8 @@ public final class DJLEngine {
             activeRunOptions = runOptions;
             for (long chunk = 0; chunk < chunks; chunk++) {
                 checkCancelled(cancel);
-                long outputStart = chunk * MDXNetDSP.GEN;
-                long inputStart = outputStart - MDXNetDSP.TRIM;
+                long chunkStart = chunk * MDXNetDSP.STEP;
+                long inputStart = chunkStart - MDXNetDSP.BORDER;
                 long validStart = Math.max(0L, inputStart);
                 long validEnd = Math.min(total, inputStart + MDXNetDSP.CHUNK);
                 int validCount = (int) Math.max(0L, validEnd - validStart);
@@ -688,20 +693,46 @@ public final class DJLEngine {
                     }
                 }
 
-                int writeCount = (int) Math.min((long) MDXNetDSP.GEN, total - outputStart);
-                for (int i = 0; i < writeCount; i++) {
-                    int sourceIndex = MDXNetDSP.TRIM + i;
-                    float vocalL = vocalLeft[sourceIndex] * compensation;
-                    float vocalR = vocalRight[sourceIndex] * compensation;
-                    float mixL = left[sourceIndex];
-                    float mixR = right[sourceIndex];
-                    vocalOutLeft[i] = vocalL;
-                    vocalOutRight[i] = vocalR;
-                    instrumentalOutLeft[i] = mixL - vocalL;
-                    instrumentalOutRight[i] = mixR - vocalR;
+                for (int i = 0; i < MDXNetDSP.CHUNK; i++) {
+                    float weight = blendWindow[i];
+                    accumulatedLeft[i] += vocalLeft[i] * weight;
+                    accumulatedRight[i] += vocalRight[i] * weight;
+                    accumulatedEnvelope[i] += weight;
+                }
+
+                boolean lastChunk = chunk == chunks - 1L;
+                int flushLimit = lastChunk ? MDXNetDSP.CHUNK : MDXNetDSP.STEP;
+                int writeCount = 0;
+                for (int i = 0; i < flushLimit; i++) {
+                    long audioIndex = chunkStart + i - MDXNetDSP.BORDER;
+                    if (audioIndex < 0L || audioIndex >= total) continue;
+                    float weight = accumulatedEnvelope[i];
+                    if (!(weight > 1e-8f)) {
+                        throw new IOException("Envelope overlap-add Kim Vocal 2 tidak valid");
+                    }
+                    float vocalL = accumulatedLeft[i] / weight * compensation;
+                    float vocalR = accumulatedRight[i] / weight * compensation;
+                    vocalOutLeft[writeCount] = vocalL;
+                    vocalOutRight[writeCount] = vocalR;
+                    instrumentalOutLeft[writeCount] = left[i] - vocalL;
+                    instrumentalOutRight[writeCount] = right[i] - vocalR;
+                    writeCount++;
                 }
                 writers[0].write(vocalOutLeft, vocalOutRight, writeCount);
                 writers[1].write(instrumentalOutLeft, instrumentalOutRight, writeCount);
+
+                if (!lastChunk) {
+                    int remain = MDXNetDSP.CHUNK - MDXNetDSP.STEP;
+                    System.arraycopy(accumulatedLeft, MDXNetDSP.STEP,
+                            accumulatedLeft, 0, remain);
+                    System.arraycopy(accumulatedRight, MDXNetDSP.STEP,
+                            accumulatedRight, 0, remain);
+                    System.arraycopy(accumulatedEnvelope, MDXNetDSP.STEP,
+                            accumulatedEnvelope, 0, remain);
+                    java.util.Arrays.fill(accumulatedLeft, remain, MDXNetDSP.CHUNK, 0f);
+                    java.util.Arrays.fill(accumulatedRight, remain, MDXNetDSP.CHUNK, 0f);
+                    java.util.Arrays.fill(accumulatedEnvelope, remain, MDXNetDSP.CHUNK, 0f);
+                }
 
                 int percent = 30 + (int) ((chunk + 1L) * 70L / chunks);
                 writeStatus(status, "jalan", percent, "Memisahkan audio",
