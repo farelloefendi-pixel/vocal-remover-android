@@ -64,7 +64,7 @@ Pola Lua direplikasi dari `main.lua` PPK referensi:
 8. ID pekerjaan disimpan agar ekstensi dapat melanjutkan pemantauan setelah dibuka kembali.
 
 Kontrak inti yang sama:
-- `muat(String soPath)`
+- `muat(String soPath, String ortDirectory)`
 - `mulai(String audioPath, String workDir, String jobId)`
 - `batal(String workDir, String jobId)`
 - `hidup(String jobId)`
@@ -130,7 +130,7 @@ HTDemucs 6S bukan model pemisah instrumen tradisional. Rebab, suling, gender, sa
 
 ## 10. Status validasi
 
-Build CI mengompilasi C++ JNI, DEX, memeriksa signature JNI, memeriksa sintaks Lua, memverifikasi alignment ELF 16 KB, dan mengemas PPK development. Build berhasil bukan bukti runtime atau izin penggunaan model. Pemuatan di CSR, decode audio nyata, pemisahan enam stem, pembatalan, Vulkan/CPU, penggunaan memori, ekspor, dan aksesibilitas masih menunggu pengujian pada Redmi 13C Android 16.
+Workflow CI dirancang mengompilasi C++ JNI dan DEX, memeriksa signature JNI, sintaks Lua, dua library ONNX Runtime, alignment ELF 16 KB, lalu mengemas PPK development. Perubahan streaming terbaru belum memiliki hasil build yang diverifikasi. Pemuatan di CSR, decode audio nyata, inferensi enam stem, pembatalan, penggunaan memori, ekspor, dan aksesibilitas masih menunggu pengujian pada Redmi 13C Android 16.
 
 
 
@@ -173,6 +173,6 @@ Kandidat enam stem ONNX tidak kompatibel langsung dengan JNI Demucs lama. Runtim
 
 ONNX Runtime Android 1.32.0 kini ditambahkan sebagai dependensi AAR resmi Maven Central. Workflow mengambil versi yang dipatok, mengekstrak kelas Java dan kedua pustaka ARM64, menggabungkan kelas API ONNX ke DEX, serta memasukkan kedua library ke paket. Java menetapkan path eksplisit untuk keduanya sebelum runtime diinisialisasi. DJLEngine menetapkan jalur kedua pustaka native secara eksplisit sebelum memanggil OrtEnvironment.getEnvironment(). Metode ujiModelEnamStem membuka sesi ONNX, memastikan node mix/stems, menjalankan tensor nol berukuran [1,2,343980], lalu memeriksa 4.127.760 nilai output float agar finite. Ini adalah smoke test satu segmen, bukan pemisahan lagu nyata.
 
-Tahap kode berikutnya kini mencakup pembukaan sesi model, validasi nama dan bentuk tensor, inferensi satu segmen, pemrosesan streaming seluruh durasi, penulisan WAV enam stem, dan instrumental. Mesin C++ lama hanya dipakai untuk menyiapkan/resampling PCM; inferensi tidak lagi memakai model safetensors atau nativeSeparate. Model ONNX FP16-weights sekitar 136 MB diverifikasi dengan SHA-256 yang dipatok, tetapi hak distribusi dan penggunaan komersialnya tetap harus dipastikan. Kebutuhan RAM serta kecepatan di Apple M4 Pro yang dilaporkan penerbit tidak dapat digeneralisasi ke Redmi 13C.
+Kode jalur ONNX kini mencakup pembukaan sesi model, validasi nama dan bentuk tensor, inferensi satu segmen, pemrosesan streaming seluruh durasi, penulisan WAV enam stem, dan instrumental. Mesin C++ lama hanya dipakai untuk menyiapkan/resampling PCM; inferensi tidak lagi memakai model safetensors atau nativeSeparate. Model ONNX FP16-weights sekitar 136 MB diverifikasi dengan SHA-256 yang dipatok, tetapi hak distribusi dan penggunaan komersialnya tetap harus dipastikan. Kebutuhan RAM serta kecepatan di Apple M4 Pro yang dilaporkan penerbit tidak dapat digeneralisasi ke Redmi 13C.
 
 CI memeriksa keberadaan kelas OrtEnvironment di DEX, memastikan kedua pustaka ONNX Runtime berarsitektur AArch64, dan memeriksa alignment halaman ELF 16 KB pada keduanya. Pemeriksaan tersebut hanya validasi paket/kompilasi; belum membuktikan runtime dapat dimuat di CSR pada perangkat. Sebelum jalur ONNX dinyatakan siap, build dan uji perangkat harus membuktikan pembukaan model, satu inferensi uji, pemrosesan file audio panjang secara bertahap, enam WAV yang valid, pembatalan tanpa file rusak, dan pembersihan file sementara. Pengujian perangkat nyata tetap wajib.
