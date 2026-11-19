@@ -1,59 +1,37 @@
 # Vocal Remover CSR
 
-Proyek **ekstensi CSR/Jieshuo** untuk memisahkan audio musik secara offline di Android. Produk akhirnya adalah paket ekstensi PPK, **bukan APK**.
+Proyek ekstensi CSR/Jieshuo untuk memisahkan vokal dan instrumental secara offline di Android. Produk akhir adalah paket ekstensi PPK, bukan APK.
 
-## Sasaran
+## Keputusan mesin
 
-- Antarmuka dan pengendali: Lua.
-- Jembatan native: Java DEX yang dimuat melalui `DexClassLoader`.
-- ONNX Runtime Android 1.32.0 dan kedua library native ARM64-nya kini dipaketkan. Bridge menginisialisasi runtime dan menyediakan smoke test satu segmen. Jalur inferensi streaming, enam writer WAV, dan instrumental kini sudah ditulis; hasil build dan uji perangkat belum diverifikasi. Mesin C++ Demucs lama masih berupa prototipe.
-- Hasil: vocals, drums, bass, other, guitar, dan piano.
-- Pemrosesan berjalan pada worker Java/C++, satu pekerjaan pada satu waktu.
-- Progres, pembatalan, pemulihan pekerjaan, dan pembersihan file sementara.
-- Model belum diaktifkan. Bobot HTDemucs 6-stem memiliki konflik lisensi yang belum terselesaikan; penggunaan komersial tidak boleh diasumsikan diizinkan.
-- Karena produk direncanakan untuk dijual, seluruh bobot, model hasil konversi, dan dependensi harus melewati pemeriksaan hak komersial sebelum rilis.
+Mesin yang dipilih adalah **Kim_Vocal_2 (MDX-Net)**. Model ini menghasilkan vokal; instrumental dihitung dari campuran asli dikurangi vokal. Izin penggunaan komersial diberikan langsung oleh pembuat bobot, KimberleyJensen, pada 2 Oktober 2026. Bukti dan atribusi dicatat di [docs/KEPUTUSAN_MDX_KIM.md](docs/KEPUTUSAN_MDX_KIM.md).
 
-## Perangkat sasaran
+Jalur runtime yang sedang disiapkan:
+- C++: `stems.cpp` + `ggml`, port MDX-Net/TFC-TDF.
+- Model runtime: GGUF hasil konversi dari Kim_Vocal_2 ONNX.
+- Integrasi Android: JNI + Java DEX.
+- Antarmuka: Lua.
+- Target: ARM64, Android 16, Redmi 13C RAM 6 GB.
+- Operasi: offline setelah model diunduh otomatis pertama kali.
+- Keluaran: `vocals.wav` dan `instrumental.wav`.
 
-Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal memakai satu segmen inferensi, dua thread intra-op, satu thread inter-op, dan CPU. NNAPI belum diaktifkan sebelum uji perangkat membuktikan stabilitas dan akurasi.
+## Status implementasi
 
-## Struktur implementasi
+Repositori saat ini masih memiliki jalur lama HTDemucs 6-stem dan ONNX Runtime. Jalur lama itu **belum kompatibel** dengan Kim_Vocal_2: model MDX-Net menerima spektrogram kompleks dengan input `[B,4,3072,256]`, bukan waveform `[1,2,343980]`. Karena itu, model tidak boleh sekadar diganti nama atau URL pada kode lama.
 
-- `main.lua`: menu CSR, pemilih audio, progres, pembatalan, dan daftar enam stem dan instrumental.
-- `bridge/lua/DJLBridge.lua`: adapter Lua mengikuti pola `MD` pada PPK referensi.
-- `bridge/java/DJLEngine.java`: kelas DEX, decoder MediaCodec, unduhan model, worker, dan pemanggilan JNI.
-- `.github/workflows/build-engine.yml`: build C++ ARM64, unduh dependensi ONNX Runtime Android 1.32.0, paketkan kedua library native ORT, gabungkan API Java ke DEX, periksa kelas dan ABI, cek signature JNI, sintaks Lua, alignment ELF 16 KB, lalu kemas PPK.
-
-## Build otomatis
-
-<https://github.com/farelloefendi-pixel/vocal-remover-android/actions/runs/44531097879>
-
-[Unduh artefak PPK development](https://github.com/farelloefendi-pixel/vocal-remover-android/actions/runs/44531097879/artifacts/14534306372)
-
-Artefak yang tertaut di atas adalah build development sebelumnya. Perubahan ONNX Runtime terbaru belum memiliki artefak build yang berhasil diverifikasi. Jangan gunakan tautan artefak lama untuk menganggap integrasi dua library atau smoke test terbaru sudah teruji.
-
-## Status model
-
-Mesin C++ HTDemucs yang ada belum menjadi jalur pemisahan aktif. ONNX Runtime Android 1.32.0 serta dua library native ARM64 sudah dimasukkan dalam workflow build. Bridge mengatur path keduanya sebelum membuat OrtEnvironment. Metode smoke test satu segmen memeriksa nama node, bentuk tensor, dan nilai output; belum ada hasil eksekusi pada perangkat. Kandidat HTDemucs 6S ONNX (136 MB, enam stem) belum diaktifkan karena hak penggunaan bobot hasil konversi belum dapat dipastikan. Pipeline inferensi streaming dan writer enam WAV stem plus instrumental sudah ditulis, tetapi belum dikompilasi ulang dan diuji pada perangkat. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan [perbandingan kandidat](docs/KEPUTUSAN_MODEL.md).
-
-## Standar mutu dan rilis komersial
-
-Target mutu mencakup penghapusan vokal sepanjang lagu dan enam stem yang sinkron. Pengujian harus mencakup pop, dangdut, rebab, suling, dan gamelan dengan audio yang hak pengujiannya jelas. Model 6-stem tidak otomatis menghasilkan penghapusan vokal terbaik; benchmark penerbit menunjukkan perbedaan mutu vokal antara model 6S dan model 4-stem. Rilis komersial ditahan sampai izin bobot dan hasil uji mutu/perangkat terverifikasi. Lihat [rencana mutu dan gerbang rilis](docs/KEPUTUSAN_MODEL.md) serta [strategi inferensi streaming dan mode kualitas](docs/STRATEGI_KUALITAS.md).
+Tahap berikutnya adalah mengganti mesin JNI lama dengan C ABI `stems.cpp`, membangun dependensi untuk Android NDK `arm64-v8a`, menyiapkan unduhan GGUF terverifikasi, lalu mengubah UI Lua menjadi dua keluaran. Sampai tahapan tersebut selesai, build yang ada tetap development dan belum berfungsi sebagai pemisah audio Kim_Vocal_2.
 
 ## Batas validasi
 
-- Build CI membuktikan kode dapat dikompilasi dan dikemas; itu belum membuktikan pemisahan audio berhasil di Redmi 13C.
-- Pemuatan DEX/SO, JNI, MediaCodec, inferensi ONNX CPU, pembatalan, pemulihan, penggunaan RAM, suhu, dan aksesibilitas masih perlu uji perangkat nyata.
-- Build development saat ini belum menghasilkan stem. Ekspor ke folder Musik bersama masih perlu diselesaikan.
-- HTDemucs 6S tidak memiliki stem rebab khusus. Rebab, suling, gender, saron, bonang, dan instrumen tradisional lain harus diuji; tidak ada jaminan semuanya akan selalu terpisah sempurna.
+- Parity C++ terhadap referensi ONNX/UVR yang dilaporkan stems.cpp berasal dari pengujian desktop, bukan Redmi 13C.
+- Build Android ARM64, pemuatan JNI, inferensi di perangkat, RAM, suhu, pembatalan, dan aksesibilitas screen reader belum diverifikasi.
+- Musik Jawa—khususnya rebab, suling, gender, saron, bonang, dan gamelan—harus masuk pengujian kualitas. Tidak ada jaminan semua instrumen tradisional akan selalu terpisah sempurna.
+- Model tidak dibundel ke PPK; ekstensi akan mengunduh otomatis saat pertama kali diperlukan sehingga pengguna tidak perlu mengunduh manual.
 
-## Dokumen
+## Dokumentasi
 
-- [Audit pola PPK referensi](docs/REFERENSI_INTEGRASI.md)
-- [Audit mesin Demucs dan JNI](docs/MESIN_DEMUCS.md)
-- [Arsitektur teknis](docs/ARSITEKTUR.md)
-- [Panduan alur CSR](docs/PENGGUNAAN_CSR.md)
+- [Keputusan mesin Kim Vocal 2 dan dasar izin](docs/KEPUTUSAN_MDX_KIM.md)
+- [Arsitektur lama dan catatan migrasi](docs/ARSITEKTUR.md)
+- [Pemeriksaan lisensi model sebelumnya](docs/LISENSI_MODEL.md)
 - [Roadmap dan pengujian](docs/ROADMAP.md)
-- [Kandidat alternatif Spleeter 5-stem ONNX](docs/ALTERNATIF_SPLEETER_ONNX.md)
-- [Perbandingan dan keputusan kandidat model](docs/KEPUTUSAN_MODEL.md)
 - [Panduan uji perangkat](docs/UJI_PERANGKAT.md)
