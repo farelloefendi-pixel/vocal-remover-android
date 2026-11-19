@@ -41,18 +41,23 @@ jobs:
         run: |
           javac -source 8 -target 8 \
             -classpath "$ANDROID_HOME/platforms/android-35/android.jar:build/ort/unpacked/classes.jar" \
-            -d build/classes bridge/java/DJLEngine.java
+            -d build/classes bridge/java/MDXNetDSP.java bridge/java/DJLEngine.java
+          mkdir -p build/test-classes
+          javac -source 8 -target 8 -classpath build/classes -d build/test-classes bridge/test/MDXNetDSPTest.java
+          java -cp build/classes:build/test-classes MDXNetDSPTest
           javap -classpath build/classes -p DJLEngine > build/DJLEngine.txt
           grep -Fq "ujiModelKimVocal2" build/DJLEngine.txt
           grep -Fq "Kim_Vocal_2.onnx" bridge/java/DJLEngine.java
           grep -Fq "ce74ef3b6a6024ce44211a07be9cf8bc6d87728cc852a68ab34eb8e58cde9c8b" bridge/java/DJLEngine.java
           grep -Fq 'new long[] { 1, 4, 3072, 256 }' bridge/java/DJLEngine.java
-          grep -Fq "Mesin pemisahan Kim Vocal 2 belum selesai" bridge/java/DJLEngine.java
+          grep -Fq "Kim Vocal 2 bukan" bridge/java/DJLEngine.java
+          grep -Fq "MDXNetDSP.createInput" bridge/java/DJLEngine.java
+          grep -Fq "instrumental.wav" bridge/java/DJLEngine.java
           "$ANDROID_HOME/build-tools/35.0.0/d8" \
             --min-api 29 \
             --lib "$ANDROID_HOME/platforms/android-35/android.jar" \
             --output build/dex \
-            build/classes/DJLEngine*.class build/ort/unpacked/classes.jar
+            build/classes/*.class build/ort/unpacked/classes.jar
           test -s build/dex/classes.dex
 
       - name: Validate Lua syntax
