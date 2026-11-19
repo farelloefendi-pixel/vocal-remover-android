@@ -77,7 +77,7 @@ public final class DJLEngine {
             if (parent == null) {
                 return "GALAT|Folder mesin tidak ditemukan";
             }
-            modelPath = new File(parent, "5c90dfd2.safetensors").getAbsolutePath();
+            modelPath = new File(parent, "htdemucs_6s_fp16weights.onnx").getAbsolutePath();
             if (ortDirectory == null || ortDirectory.length() == 0) {
                 return "GALAT|Folder pustaka ONNX Runtime kosong";
             }
@@ -90,8 +90,7 @@ public final class DJLEngine {
             System.setProperty("onnxruntime.native.onnxruntime.path", ortCore.getAbsolutePath());
             System.setProperty("onnxruntime.native.onnxruntime4j_jni.path", ortJni.getAbsolutePath());
             ortEnvironment = OrtEnvironment.getEnvironment();
-            String info = nativeComputeInfo(1, false);
-            return "OK|ONNX Runtime Android siap; " + (info == null ? "mesin native tersedia" : info);
+            return "OK|ONNX Runtime Android siap; decoder dan resampler native tersedia";
         } catch (Throwable error) {
             return "GALAT|" + message(error);
         }
@@ -421,15 +420,9 @@ public final class DJLEngine {
             if (!root.exists() && !root.mkdirs()) {
                 throw new IOException("Folder kerja tidak bisa dibuat");
             }
-            writeStatus(status, "jalan", 0, "Memuat model", "Memeriksa bobot dan menyiapkan mesin Demucs");
+            writeStatus(status, "jalan", 0, "Memeriksa model", "Memverifikasi model ONNX enam stem");
             checkCancelled(cancel);
-
             verifyModel(modelPath);
-            String modelError = nativeLoadModel(modelPath);
-            if (modelError != null && modelError.length() > 0) {
-                throw new IllegalStateException(modelError);
-            }
-            checkCancelled(cancel);
 
             writeStatus(status, "jalan", 1, "Mendekode audio", "Membaca sumber audio");
             AudioInfo info = decodeToFloat32(audioPath, raw, status, cancel);
@@ -442,9 +435,7 @@ public final class DJLEngine {
                 private long lastWrite;
                 @Override
                 public boolean onProgress(float fraction, String stage) {
-                    if (cancel.exists()) {
-                        return false;
-                    }
+                    if (cancel.exists()) return false;
                     long now = System.currentTimeMillis();
                     if (now - lastWrite >= 500 || fraction >= 1f) {
                         int percent = 15 + Math.round(clamp(fraction) * 15f);
@@ -455,11 +446,14 @@ public final class DJLEngine {
                 }
             };
 
-            writeStatus(status, "jalan", 15, "Menyiapkan audio", "Mengubah audio ke format mesin");
+            writeStatus(status, "jalan", 15, "Menyiapkan audio", "Mengubah audio menjadi stereo 44,1 kHz");
             String prepareError = nativePrepareInput(
                     raw.getAbsolutePath(), info.sampleRate, info.channels,
                     prepared.getAbsolutePath(), prepareProgress);
             if (prepareError != null && prepareError.length() > 0) {
+                if ("cancelled".equalsIgnoreCase(prepareError)) {
+                    throw new CancellationException("Pekerjaan dibatalkan");
+                }
                 throw new IllegalStateException(prepareError);
             }
             checkCancelled(cancel);
@@ -467,40 +461,12 @@ public final class DJLEngine {
             if (!output.exists() && !output.mkdirs()) {
                 throw new IOException("Folder hasil tidak bisa dibuat");
             }
-
-            ProgressListener separationProgress = new ProgressListener() {
-                private long lastWrite;
-                @Override
-                public boolean onProgress(float fraction, String stage) {
-                    if (cancel.exists()) {
-                        return false;
-                    }
-                    long now = System.currentTimeMillis();
-                    if (now - lastWrite >= 500 || fraction >= 1f) {
-                        int percent = 30 + Math.round(clamp(fraction) * 70f);
-                        writeStatus(status, "jalan", percent, "Memisahkan audio", safeStage(stage));
-                        lastWrite = now;
-                    }
-                    return true;
-                }
-            };
-
-            writeStatus(status, "jalan", 30, "Menyiapkan akselerasi", "Memeriksa dukungan Vulkan dan CPU");
-            boolean[] write = new boolean[] { true, true, true, true, true, true };
-            int computeThreads = Math.min(3,
-                    Math.max(1, Runtime.getRuntime().availableProcessors() - 1));
-            String computeInfo = nativeComputeInfo(computeThreads, true);
-            boolean useGpu = computeInfo != null
-                    && computeInfo.contains("GPU: ")
-                    && !computeInfo.contains("GPU not used");
-            writeStatus(status, "jalan", 30, "Memisahkan audio",
-                    (useGpu ? "Akselerasi GPU aktif. " : "Menggunakan CPU. ") + computeInfo);
-            nativeSeparate(prepared.getAbsolutePath(), output.getAbsolutePath(),
-                    write, 1, computeThreads, useGpu, separationProgress);
+            separateOnnxStreaming(prepared, output, status, cancel);
             checkCancelled(cancel);
 
             writeResult(new File(root, "hasil_" + id + ".json"), output);
-            writeStatus(status, "selesai", 100, "Selesai", "Enam stem audio berhasil dibuat");
+            writeStatus(status, "selesai", 100, "Selesai",
+                    "Enam stem dan instrumental sepanjang audio berhasil dibuat");
         } catch (CancellationException cancelled) {
             writeStatus(status, "batal", 0, "Dibatalkan", "Pekerjaan dihentikan atas permintaan pengguna");
             deleteTree(output);
@@ -513,6 +479,7 @@ public final class DJLEngine {
             raw.delete();
             prepared.delete();
             cancel.delete();
+            activeRunOptions = null;
             synchronized (WORKERS) {
                 WORKERS.remove(id);
             }
@@ -520,6 +487,255 @@ public final class DJLEngine {
         }
     }
 
+    private static final int ONNX_SAMPLES = 343980;
+    private static final int ONNX_OVERLAP = ONNX_SAMPLES / 4;
+    private static final int ONNX_STRIDE = ONNX_SAMPLES - ONNX_OVERLAP;
+    private static final String[] STEM_NAMES = {
+            "drums", "bass", "other", "vocals", "guitar", "piano"
+    };
+    private static volatile OrtSession.RunOptions activeRunOptions;
+
+    private static final class WavPcm16Writer implements AutoCloseable {
+        private final File file;
+        private final BufferedOutputStream stream;
+        private final byte[] bytes = new byte[ONNX_STRIDE * 4];
+        private long frames;
+        private boolean closed;
+
+        WavPcm16Writer(File target) throws IOException {
+            file = target;
+            stream = new BufferedOutputStream(new FileOutputStream(target, false), 1 << 20);
+            stream.write(new byte[44]);
+        }
+
+        void writeNormalized(float[] left, float[] right, float[] weights, int count)
+                throws IOException {
+            ByteBuffer buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
+            for (int i = 0; i < count; i++) {
+                float weight = Math.max(weights[i], 1e-8f);
+                buffer.putShort(toPcm16(left[i] / weight));
+                buffer.putShort(toPcm16(right[i] / weight));
+            }
+            stream.write(bytes, 0, buffer.position());
+            frames += count;
+        }
+
+        void write(float[] left, float[] right, int count) throws IOException {
+            ByteBuffer buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
+            for (int i = 0; i < count; i++) {
+                buffer.putShort(toPcm16(left[i]));
+                buffer.putShort(toPcm16(right[i]));
+            }
+            stream.write(bytes, 0, buffer.position());
+            frames += count;
+        }
+
+        private static short toPcm16(float value) {
+            if (Float.isNaN(value) || Float.isInfinite(value)) value = 0f;
+            value = Math.max(-1f, Math.min(1f, value));
+            return (short) Math.round(value * 32767f);
+        }
+
+        @Override
+        public void close() throws IOException {
+            if (closed) return;
+            closed = true;
+            stream.flush();
+            stream.close();
+            long dataBytes = frames * 4L;
+            if (dataBytes > 0xffffffffL - 36L) {
+                throw new IOException("Audio terlalu panjang untuk WAV PCM standar");
+            }
+            ByteBuffer header = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN);
+            header.put("RIFF".getBytes(StandardCharsets.US_ASCII));
+            header.putInt((int) (36L + dataBytes));
+            header.put("WAVE".getBytes(StandardCharsets.US_ASCII));
+            header.put("fmt ".getBytes(StandardCharsets.US_ASCII));
+            header.putInt(16);
+            header.putShort((short) 1);
+            header.putShort((short) 2);
+            header.putInt(44100);
+            header.putInt(44100 * 4);
+            header.putShort((short) 4);
+            header.putShort((short) 16);
+            header.put("data".getBytes(StandardCharsets.US_ASCII));
+            header.putInt((int) dataBytes);
+            try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "rw")) {
+                raf.seek(0);
+                raf.write(header.array());
+            }
+        }
+    }
+
+    private static void separateOnnxStreaming(
+            File prepared, File output, File status, File cancel) throws Exception {
+        long bytes = prepared.length();
+        if (bytes <= 0 || bytes % 8L != 0) {
+            throw new IOException("PCM siap harus berupa stereo float32 44,1 kHz");
+        }
+        final long total = bytes / 8L;
+        if (total < 44100L) throw new IOException("Audio lebih pendek dari satu detik");
+        final long chunks = (total + ONNX_STRIDE - 1L) / ONNX_STRIDE;
+
+        OrtSession.SessionOptions options = new OrtSession.SessionOptions();
+        options.setIntraOpNumThreads(2);
+        options.setInterOpNumThreads(1);
+        options.setMemoryPatternOptimization(true);
+        options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL);
+
+        WavPcm16Writer[] writers = new WavPcm16Writer[7];
+        try (OrtSession session = ortEnvironment.createSession(modelPath, options);
+             OrtSession.RunOptions runOptions = new OrtSession.RunOptions();
+             java.io.RandomAccessFile inputFile = new java.io.RandomAccessFile(prepared, "r")) {
+            if (!session.getInputNames().contains("mix")
+                    || !session.getOutputNames().contains("stems")) {
+                throw new IOException("Model tidak memiliki node mix dan stems");
+            }
+            TensorInfo inInfo = (TensorInfo) session.getInputInfo().get("mix").getInfo();
+            TensorInfo outInfo = (TensorInfo) session.getOutputInfo().get("stems").getInfo();
+            if (!sameShape(inInfo.getShape(), new long[] {1, 2, ONNX_SAMPLES})
+                    || !sameShape(outInfo.getShape(), new long[] {1, 6, 2, ONNX_SAMPLES})) {
+                throw new IOException("Bentuk tensor model tidak sesuai kontrak HTDemucs 6S");
+            }
+
+            for (int i = 0; i < 6; i++) {
+                writers[i] = new WavPcm16Writer(new File(output, STEM_NAMES[i] + ".wav"));
+            }
+            writers[6] = new WavPcm16Writer(new File(output, "instrumental.wav"));
+
+            float[][][] accum = new float[6][2][ONNX_SAMPLES];
+            float[] weights = new float[ONNX_SAMPLES];
+            float[] instrumentalL = new float[ONNX_STRIDE];
+            float[] instrumentalR = new float[ONNX_STRIDE];
+            ByteBuffer rawBytes = ByteBuffer.allocate(ONNX_SAMPLES * 2 * 4)
+                    .order(ByteOrder.LITTLE_ENDIAN);
+            FloatBuffer rawInterleaved = rawBytes.asFloatBuffer();
+            ByteBuffer tensorBytes = ByteBuffer.allocateDirect(ONNX_SAMPLES * 2 * 4)
+                    .order(ByteOrder.nativeOrder());
+            FloatBuffer tensorData = tensorBytes.asFloatBuffer();
+            float[] fade = new float[ONNX_OVERLAP];
+            for (int i = 0; i < ONNX_OVERLAP; i++) {
+                fade[i] = i / (float) (ONNX_OVERLAP - 1);
+            }
+
+            activeRunOptions = runOptions;
+            long start = 0;
+            for (long chunk = 0; chunk < chunks; chunk++) {
+                checkCancelled(cancel);
+                int available = (int) Math.min(ONNX_SAMPLES, total - start);
+                rawBytes.clear();
+                for (int i = 0; i < ONNX_SAMPLES * 2; i++) rawBytes.putFloat(0f);
+                rawBytes.flip();
+                byte[] audioBlock = new byte[available * 8];
+                inputFile.seek(start * 8L);
+                inputFile.readFully(audioBlock);
+                rawInterleaved = ByteBuffer.wrap(audioBlock)
+                        .order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
+
+                tensorData.clear();
+                for (int i = 0; i < ONNX_SAMPLES; i++) {
+                    tensorData.put(i < available ? rawInterleaved.get(i * 2) : 0f);
+                }
+                for (int i = 0; i < ONNX_SAMPLES; i++) {
+                    tensorData.put(i < available ? rawInterleaved.get(i * 2 + 1) : 0f);
+                }
+                tensorData.flip();
+
+                try (OnnxTensor tensor = OnnxTensor.createTensor(
+                        ortEnvironment, tensorData, new long[] {1, 2, ONNX_SAMPLES})) {
+                    Map<String, OnnxTensor> feeds = new HashMap<>();
+                    feeds.put("mix", tensor);
+                    try (OrtSession.Result result = session.run(feeds, runOptions)) {
+                        OnnxTensor outputTensor = (OnnxTensor) result.get("stems");
+                        if (outputTensor == null
+                                || !sameShape(outputTensor.getInfo().getShape(),
+                                        new long[] {1, 6, 2, ONNX_SAMPLES})) {
+                            throw new IOException("Output inferensi tidak sesuai enam stem");
+                        }
+                        FloatBuffer values = outputTensor.getFloatBuffer();
+                        int expected = 6 * 2 * ONNX_SAMPLES;
+                        if (values == null || values.remaining() != expected) {
+                            throw new IOException("Buffer output inferensi tidak lengkap");
+                        }
+                        for (int i = 0; i < ONNX_SAMPLES; i++) {
+                            float weight;
+                            if (i < ONNX_OVERLAP) weight = fade[i];
+                            else if (i >= ONNX_SAMPLES - ONNX_OVERLAP) {
+                                weight = fade[ONNX_SAMPLES - 1 - i];
+                            } else weight = 1f;
+                            if (i >= available) continue;
+                            weights[i] += weight;
+                            for (int stem = 0; stem < 6; stem++) {
+                                for (int channel = 0; channel < 2; channel++) {
+                                    float value = values.get((stem * 2 + channel)
+                                            * ONNX_SAMPLES + i);
+                                    if (Float.isNaN(value) || Float.isInfinite(value)) {
+                                        throw new IOException("Model menghasilkan nilai audio tidak valid");
+                                    }
+                                    accum[stem][channel][i] += value * weight;
+                                }
+                            }
+                            if ((i & 8191) == 0) checkCancelled(cancel);
+                        }
+                    }
+                }
+
+                long remaining = total - start;
+                int flush = (int) Math.min(ONNX_STRIDE, remaining);
+                for (int stem = 0; stem < 6; stem++) {
+                    writers[stem].writeNormalized(
+                            accum[stem][0], accum[stem][1], weights, flush);
+                }
+                for (int i = 0; i < flush; i++) {
+                    float weight = Math.max(weights[i], 1e-8f);
+                    float left = 0f;
+                    float right = 0f;
+                    for (int stem = 0; stem < 6; stem++) {
+                        if (stem == 3) continue;
+                        left += accum[stem][0][i] / weight;
+                        right += accum[stem][1][i] / weight;
+                    }
+                    instrumentalL[i] = left;
+                    instrumentalR[i] = right;
+                }
+                writers[6].write(instrumentalL, instrumentalR, flush);
+
+                if (remaining > ONNX_STRIDE) {
+                    for (int stem = 0; stem < 6; stem++) {
+                        for (int channel = 0; channel < 2; channel++) {
+                            System.arraycopy(accum[stem][channel], ONNX_STRIDE,
+                                    accum[stem][channel], 0, ONNX_OVERLAP);
+                            java.util.Arrays.fill(accum[stem][channel],
+                                    ONNX_OVERLAP, ONNX_SAMPLES, 0f);
+                        }
+                    }
+                    System.arraycopy(weights, ONNX_STRIDE, weights, 0, ONNX_OVERLAP);
+                    java.util.Arrays.fill(weights, ONNX_OVERLAP, ONNX_SAMPLES, 0f);
+                    start += ONNX_STRIDE;
+                }
+
+                int percent = 30 + (int) ((chunk + 1L) * 70L / chunks);
+                writeStatus(status, "jalan", percent, "Memisahkan audio",
+                        "Segmen " + (chunk + 1L) + " dari " + chunks);
+            }
+        } finally {
+            activeRunOptions = null;
+            for (WavPcm16Writer writer : writers) {
+                if (writer != null) {
+                    try { writer.close(); } catch (Exception ignored) { }
+                }
+            }
+            options.close();
+        }
+    }
+
+    private static boolean sameShape(long[] actual, long[] expected) {
+        if (actual == null || actual.length != expected.length) return false;
+        for (int i = 0; i < actual.length; i++) {
+            if (actual[i] != expected[i]) return false;
+        }
+        return true;
+    }
     private static final class AudioInfo {
         final int sampleRate;
         final int channels;
@@ -763,7 +979,7 @@ public final class DJLEngine {
                 && modified == verifiedModelModified) {
             return;
         }
-        final String expected = "d2a1745f0744721f6b8ca5bf469b67c651ea5ed1b52998cab033b2158609d411";
+        final String expected = "7ce55792e2231c93fbf92de95f5fd5b3a5e6c89f7db690dfd693e8f1dce56869";
         java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
         try (java.io.FileInputStream input = new java.io.FileInputStream(path)) {
             byte[] buffer = new byte[1024 * 1024];
@@ -780,7 +996,7 @@ public final class DJLEngine {
             verifiedModelPath = null;
             verifiedModelLength = -1;
             verifiedModelModified = -1;
-            throw new IOException("Checksum model tidak cocok. Unduh ulang 5c90dfd2.safetensors.");
+            throw new IOException("Checksum model ONNX tidak cocok. Unduh ulang model enam stem.");
         }
         verifiedModelPath = path;
         verifiedModelLength = length;
