@@ -6,7 +6,7 @@ Proyek **ekstensi CSR/Jieshuo** untuk memisahkan audio musik secara offline di A
 
 - Antarmuka dan pengendali: Lua.
 - Jembatan native: Java DEX yang dimuat melalui `DexClassLoader`.
-- ONNX Runtime Android 1.32.0 kini dipaketkan ke DEX dan library ARM64 serta diinisialisasi oleh bridge; inferensi model ONNX belum diimplementasikan. Mesin C++ Demucs lama masih berupa prototipe.
+- ONNX Runtime Android 1.32.0 dan kedua library native ARM64-nya kini dipaketkan. Bridge menginisialisasi runtime dan menyediakan smoke test satu segmen; pemrosesan lagu penuh belum diimplementasikan. Mesin C++ Demucs lama masih berupa prototipe.
 - Hasil: vocals, drums, bass, other, guitar, dan piano.
 - Pemrosesan berjalan pada worker Java/C++, satu pekerjaan pada satu waktu.
 - Progres, pembatalan, pemulihan pekerjaan, dan pembersihan file sementara.
@@ -22,7 +22,7 @@ Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal diba
 - `main.lua`: menu CSR, pemilih audio, progres, pembatalan, dan daftar enam hasil.
 - `bridge/lua/DJLBridge.lua`: adapter Lua mengikuti pola `MD` pada PPK referensi.
 - `bridge/java/DJLEngine.java`: kelas DEX, decoder MediaCodec, unduhan model, worker, dan pemanggilan JNI.
-- `.github/workflows/build-engine.yml`: build C++ ARM64, unduh dependensi ONNX Runtime Android 1.32.0, gabungkan API Java ke DEX, periksa kelas dan ABI, cek signature JNI, sintaks Lua, alignment ELF 16 KB, lalu kemas PPK.
+- `.github/workflows/build-engine.yml`: build C++ ARM64, unduh dependensi ONNX Runtime Android 1.32.0, paketkan kedua library native ORT, gabungkan API Java ke DEX, periksa kelas dan ABI, cek signature JNI, sintaks Lua, alignment ELF 16 KB, lalu kemas PPK.
 
 ## Build otomatis
 
@@ -30,11 +30,11 @@ Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal diba
 
 [Unduh artefak PPK development](https://github.com/farelloefendi-pixel/vocal-remover-android/actions/runs/44531097879/artifacts/14534306372)
 
-Build terbaru **berhasil** pada 19 November 2026. Artefak `vocal-remover-csr-dev-arm64` berisi `Vocal_Remover_CSR_DEV.ppk`, DEX, library ARM64, dan informasi build. Paket ini dapat digunakan untuk menguji pemuatan ekstensi, menu, navigasi pembaca layar, serta pemilih audio. Paket ini **belum dapat memisahkan audio** karena model belum diaktifkan.
+Artefak yang tertaut di atas adalah build development sebelumnya. Perubahan ONNX Runtime terbaru belum memiliki artefak build yang berhasil diverifikasi. Jangan gunakan tautan artefak lama untuk menganggap integrasi dua library atau smoke test terbaru sudah teruji.
 
 ## Status model
 
-Mesin C++ HTDemucs yang ada belum menjadi jalur pemisahan aktif. ONNX Runtime Android 1.32.0 sudah dipaketkan dan bridge mencoba menginisialisasi OrtEnvironment saat dimuat. Kandidat HTDemucs 6S ONNX (136 MB, enam stem) belum dibuka atau dijalankan karena pernyataan MIT pada ekspor belum cukup untuk memastikan hak bobot dasar. Pipeline inferensi streaming dan writer enam WAV masih harus dibuat. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan [perbandingan kandidat](docs/KEPUTUSAN_MODEL.md).
+Mesin C++ HTDemucs yang ada belum menjadi jalur pemisahan aktif. ONNX Runtime Android 1.32.0 serta dua library native ARM64 sudah dimasukkan dalam workflow build. Bridge mengatur path keduanya sebelum membuat OrtEnvironment. Metode smoke test satu segmen memeriksa nama node, bentuk tensor, dan nilai output; belum ada hasil eksekusi pada perangkat. Kandidat HTDemucs 6S ONNX (136 MB, enam stem) belum diaktifkan karena pernyataan MIT pada ekspor belum cukup untuk memastikan hak bobot dasar. Pipeline inferensi streaming dan writer enam WAV masih harus dibuat. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan [perbandingan kandidat](docs/KEPUTUSAN_MODEL.md).
 
 ## Standar mutu dan rilis komersial
 
