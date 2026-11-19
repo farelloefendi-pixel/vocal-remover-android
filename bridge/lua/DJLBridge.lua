@@ -199,6 +199,9 @@ function M.unduhModel()
   unduhAktif = true
   threadUnduh = Thread(Runnable({
     run = function()
+      pcall(function()
+        luajava.bindClass("android.os.Process").setThreadPriority(10)
+      end)
       local ok, hasil = pcall(function()
         return M.panggil(kls, "unduhModel", 2, { MODEL_URL, statusUnduh })
       end)
