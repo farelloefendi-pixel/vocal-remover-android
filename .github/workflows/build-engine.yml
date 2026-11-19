@@ -81,6 +81,8 @@ jobs:
             --output dist build-java/classes/DJLEngine*.class build-ort/unpacked/classes.jar
           test -s dist/classes.dex
           mv dist/classes.dex dist/DJLEngine.dex
+          "$ANDROID_HOME/build-tools/35.0.0/dexdump" -l plain dist/DJLEngine.dex > dist/DEX_CLASSES.txt
+          grep -Fq "Lai/onnxruntime/OrtEnvironment;" dist/DEX_CLASSES.txt
 
       - name: Check Lua bridge syntax
         run: |
@@ -96,8 +98,9 @@ jobs:
           cp dist-libonnxruntime.so dist/libonnxruntime.so
           cp bridge/lua/DJLBridge.lua dist/bridge/lua/DJLBridge.lua
           cp licenses/* dist/licenses/
-          file dist/libdjl64.so dist/DJLEngine.dex
+          file dist/libdjl64.so dist/libonnxruntime.so dist/DJLEngine.dex
           readelf -h dist/libdjl64.so | grep -E 'Class:|Machine:'
+          readelf -h dist/libonnxruntime.so | grep -E 'Class:|Machine:' | grep -q AArch64
           readelf -l dist/libdjl64.so | tee dist/ELF_PROGRAM_HEADERS.txt
           grep -q '0x4000' dist/ELF_PROGRAM_HEADERS.txt
           sha256sum dist/libdjl64.so dist/libonnxruntime.so dist/DJLEngine.dex | tee dist/SHA256SUMS.txt
