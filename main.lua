@@ -505,6 +505,20 @@ local function menuStatus()
   if not siap then
     tombol[#tombol + 1] = { "Unduh model Kim Vocal 2", function() mulaiUnduhModel(nil) end }
   end
+  tombol[#tombol + 1] = { "Hapus model Kim Vocal 2", function()
+    dialogPesan("Konfirmasi penghapusan model",
+      "Hapus permanen Kim_Vocal_2.onnx dari folder internal ekstensi beserta berkas unduhan sementara? Mesin C++, ONNX Runtime, hasil vocals.wav, dan instrumental.wav tidak akan dihapus. Untuk memakai pemisahan lagi, model perlu diunduh kembali.",
+      {
+        { "Hapus model", function()
+          local berhasil, pesanHapus = Bridge.hapusModel()
+          dialogPesan(berhasil and "Model berhasil dihapus" or "Penghapusan gagal",
+            tostring(pesanHapus),
+            { { "Kembali", function() menuStatus() end } },
+            function() menuStatus() end)
+        end },
+        { "Batal", function() menuStatus() end }
+      }, function() menuStatus() end)
+  end }
   tombol[#tombol + 1] = { "Kembali", function() menuUtama() end }
   dialogPesan("Status mesin dan model", teks, tombol, function() menuUtama() end)
 end
