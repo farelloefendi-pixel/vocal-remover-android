@@ -29,7 +29,7 @@
 - [ ] Terapkan penanganan bin awal sesuai referensi model.
 - [x] Integrasikan inferensi ONNX satu segmen dengan validasi node dan bentuk tensor.
 - [x] Implementasikan iSTFT dan normalisasi envelope.
-- [x] Implementasikan center trim, padding batas, dan penyambungan segmen tanpa kehilangan atau duplikasi sampel.
+- [x] Implementasikan weighted overlap-add 25%, padding batas, dan penyambungan segmen tanpa kehilangan atau duplikasi sampel.
 - [x] Luluskan direct-DFT dan round-trip STFT/iSTFT pada CI (galat maksimum round-trip 3,87e-7).
 
 ## Tahap 3 — audio dan dua keluaran
