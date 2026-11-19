@@ -562,8 +562,20 @@ local function mulaiEkstensi()
     elseif s and s.state == "jalan" and Bridge.hidup(aktif.id) == "1" then
       pantau(aktif.id, aktif.path)
       return
+    elseif s and s.state == "jalan" then
+      if Bridge.hidup(aktif.id) == "1" then
+        pantau(aktif.id, aktif.path)
+        return
+      end
+      Bridge.bersihkanSementara(aktif.id)
+      dialogPesan("Pekerjaan sebelumnya terhenti",
+        "Proses pemisahan sebelumnya sudah tidak berjalan. Berkas sementara dan hasil parsial dibersihkan. Silakan mulai lagi.",
+        { { "Lanjutkan", function() menuUtama() end } }, function() menuUtama() end)
+      return
     elseif s and (s.state == "galat" or s.state == "batal") then
       Bridge.hapusAktif()
+    elseif not s then
+      Bridge.bersihkanSementara(aktif.id)
     end
   end
   menuUtama()
