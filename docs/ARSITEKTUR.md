@@ -124,4 +124,4 @@ HTDemucs 6S bukan model pemisah instrumen tradisional. Rebab, suling, gender, sa
 
 ## 10. Status validasi
 
-Build CI mengompilasi C++ JNI, DEX, memeriksa signature JNI, memeriksa sintaks Lua, dan mengemas PPK development. Build berhasil bukan bukti runtime atau izin penggunaan model. Pemuatan di CSR, decode audio nyata, pemisahan enam stem, pembatalan, Vulkan/CPU, penggunaan memori, ekspor, dan aksesibilitas masih menunggu pengujian pada Redmi 13C Android 16.
+Build CI mengompilasi C++ JNI, DEX, memeriksa signature JNI, memeriksa sintaks Lua, memverifikasi alignment ELF 16 KB, dan mengemas PPK development. Build berhasil bukan bukti runtime atau izin penggunaan model. Pemuatan di CSR, decode audio nyata, pemisahan enam stem, pembatalan, Vulkan/CPU, penggunaan memori, ekspor, dan aksesibilitas masih menunggu pengujian pada Redmi 13C Android 16.
