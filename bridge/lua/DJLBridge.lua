@@ -105,6 +105,7 @@ function M.mulai(ctxBaru, baseBaru)
   end
   kerja = tostring(ctx.getFilesDir().getAbsolutePath()) .. "/vocal_remover_work"
   pcall(function() File(kerja).mkdirs() end)
+  statusUnduh = kerja .. "/" .. MODEL_STATUS
   folder = nil
   kelas = nil
   return true
@@ -360,7 +361,7 @@ function M.statusMesin()
   local kls, pesan = M.siapkan()
   if not kls then return false, pesan end
   local info = M.panggil(kls, "infoMesin", 0, {})
-  return true, pesan .. " " .. tostring(info)
+  return true, tostring(pesan or "Mesin siap.") .. " " .. tostring(info)
 end
 
 return M
