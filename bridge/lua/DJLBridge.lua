@@ -356,6 +356,19 @@ function M.hapusHasil(id)
   hapusPohon(File(kerja .. "/stem_" .. id))
   File(kerja .. "/hasil_" .. id .. ".json").delete()
   File(kerja .. "/status_" .. id .. ".txt").delete()
+  local last = M.terakhir()
+  if last and last.id == id then File(kerja .. "/terakhir.txt").delete() end
+  M.hapusAktif()
+  return true
+end
+
+function M.bersihkanSementara(id)
+  File(kerja .. "/audio_" .. id .. ".f32").delete()
+  File(kerja .. "/siap_" .. id .. ".f32").delete()
+  File(kerja .. "/batal_" .. id .. ".flag").delete()
+  hapusPohon(File(kerja .. "/stem_" .. id))
+  File(kerja .. "/hasil_" .. id .. ".json").delete()
+  File(kerja .. "/status_" .. id .. ".txt").delete()
   M.hapusAktif()
   return true
 end
