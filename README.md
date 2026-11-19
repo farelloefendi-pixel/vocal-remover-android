@@ -6,7 +6,7 @@ Proyek **ekstensi CSR/Jieshuo** untuk memisahkan audio musik secara offline di A
 
 - Antarmuka dan pengendali: Lua.
 - Jembatan native: Java DEX yang dimuat melalui `DexClassLoader`.
-- Mesin C++ Demucs lama masih berupa prototipe; kandidat berikutnya adalah integrasi ONNX Runtime Android untuk HTDemucs 6-stem.
+- ONNX Runtime Android 1.32.0 kini dipaketkan ke DEX dan library ARM64 serta diinisialisasi oleh bridge; inferensi model ONNX belum diimplementasikan. Mesin C++ Demucs lama masih berupa prototipe.
 - Hasil: vocals, drums, bass, other, guitar, dan piano.
 - Pemrosesan berjalan pada worker Java/C++, satu pekerjaan pada satu waktu.
 - Progres, pembatalan, pemulihan pekerjaan, dan pembersihan file sementara.
@@ -22,7 +22,7 @@ Redmi 13C, RAM 6 GB, penyimpanan 128 GB, ARM64, Android 16. Pengaturan awal diba
 - `main.lua`: menu CSR, pemilih audio, progres, pembatalan, dan daftar enam hasil.
 - `bridge/lua/DJLBridge.lua`: adapter Lua mengikuti pola `MD` pada PPK referensi.
 - `bridge/java/DJLEngine.java`: kelas DEX, decoder MediaCodec, unduhan model, worker, dan pemanggilan JNI.
-- `.github/workflows/build-engine.yml`: build otomatis C++ ARM64, DEX, pemeriksaan signature JNI, sintaks Lua, alignment ELF 16 KB, dan pengemasan PPK.
+- `.github/workflows/build-engine.yml`: build C++ ARM64, unduh dependensi ONNX Runtime Android 1.32.0, gabungkan API Java ke DEX, periksa kelas dan ABI, cek signature JNI, sintaks Lua, alignment ELF 16 KB, lalu kemas PPK.
 
 ## Build otomatis
 
@@ -34,7 +34,7 @@ Build terbaru **berhasil** pada 19 November 2026. Artefak `vocal-remover-csr-dev
 
 ## Status model
 
-Mesin C++ HTDemucs yang ada belum menjadi jalur pemisahan aktif. Kandidat HTDemucs 6S ONNX (136 MB, enam stem) sedang dinilai, tetapi belum diintegrasikan atau diunduh karena pernyataan MIT pada ekspor belum cukup untuk memastikan hak bobot dasar. Integrasi ONNX memerlukan runtime dan pipeline inferensi yang berbeda. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan [perbandingan kandidat](docs/KEPUTUSAN_MODEL.md).
+Mesin C++ HTDemucs yang ada belum menjadi jalur pemisahan aktif. ONNX Runtime Android 1.32.0 sudah dipaketkan dan bridge mencoba menginisialisasi OrtEnvironment saat dimuat. Kandidat HTDemucs 6S ONNX (136 MB, enam stem) belum dibuka atau dijalankan karena pernyataan MIT pada ekspor belum cukup untuk memastikan hak bobot dasar. Pipeline inferensi streaming dan writer enam WAV masih harus dibuat. Lihat [pemeriksaan lisensi](docs/LISENSI_MODEL.md) dan [perbandingan kandidat](docs/KEPUTUSAN_MODEL.md).
 
 ## Standar mutu dan rilis komersial
 
