@@ -430,7 +430,7 @@ public final class DJLEngine {
             @Override
             public void run() {
                 try {
-                    android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DEFAULT);
+                    android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
                 } catch (Throwable ignored) {
                 }
                 kerjakan(audioPath, workDir, id);
@@ -672,38 +672,45 @@ public final class DJLEngine {
     private static final class ProgressHeartbeat implements AutoCloseable {
         private final AtomicBoolean selesai = new AtomicBoolean(false);
         private final Thread thread;
+        private volatile String tahap;
+        private volatile String detail;
 
         ProgressHeartbeat(final File status, final File cancel,
                           final long currentChunk, final long totalChunks,
                           final int percent) {
+            tahap = currentChunk == 0L
+                    ? "Memuat model Kim Vocal 2"
+                    : "Memproses segmen " + currentChunk + " dari " + totalChunks;
+            detail = currentChunk == 0L
+                    ? "Membuka sesi ONNX Runtime."
+                    : "Menyiapkan pemrosesan segmen.";
             thread = new Thread(new Runnable() {
                 @Override
                 public void run() {
                     long mulai = System.currentTimeMillis();
                     while (!selesai.get()) {
                         try {
-                            Thread.sleep(5000L);
+                            Thread.sleep(3000L);
                         } catch (InterruptedException interrupted) {
                             Thread.currentThread().interrupt();
                             break;
                         }
                         if (selesai.get()) break;
                         long elapsed = (System.currentTimeMillis() - mulai) / 1000L;
-                        String stage = currentChunk == 0L
-                                ? "Memuat model Kim Vocal 2"
-                                : cancel.exists()
-                                    ? "Menghentikan segmen " + currentChunk + " dari " + totalChunks
-                                    : "Memproses segmen " + currentChunk + " dari " + totalChunks;
-                        String detail = currentChunk == 0L
-                                ? "Membuka sesi ONNX Runtime; waktu berjalan " + elapsed + " detik."
-                                : "Segmen masih dikerjakan; waktu berjalan " + elapsed
-                                    + " detik. Persentase bertambah setelah segmen selesai.";
-                        writeStatus(status, "jalan", percent, stage, detail);
+                        String currentStage = cancel.exists()
+                                ? "Menghentikan " + tahap : tahap;
+                        String currentDetail = detail + " Waktu tahap ini " + elapsed + " detik.";
+                        writeStatus(status, "jalan", percent, currentStage, currentDetail);
                     }
                 }
             }, "VocalRemover-Progress");
             thread.setDaemon(true);
             thread.start();
+        }
+
+        void update(String stage, String description) {
+            tahap = stage;
+            detail = description;
         }
 
         @Override
@@ -733,7 +740,7 @@ public final class DJLEngine {
 
         OrtSession.SessionOptions options = new OrtSession.SessionOptions();
         int availableCores = Runtime.getRuntime().availableProcessors();
-        int inferenceThreads = Math.max(2, Math.min(4, availableCores - 1));
+        int inferenceThreads = Math.max(2, Math.min(3, availableCores - 1));
         options.setIntraOpNumThreads(inferenceThreads);
         options.setInterOpNumThreads(1);
         options.setMemoryPatternOptimization(true);
@@ -790,6 +797,10 @@ public final class DJLEngine {
                 ProgressHeartbeat heartbeat = new ProgressHeartbeat(
                         status, cancel, currentChunk, chunks, completedPercent);
                 try {
+                heartbeat.update("Menganalisis frekuensi",
+                        "Mengubah audio segmen " + currentChunk + " ke bentuk frekuensi.");
+                writeStatus(status, "jalan", completedPercent,
+                        "Menganalisis frekuensi", "Segmen " + currentChunk + " dari " + chunks);
                 checkCancelled(cancel);
                 long chunkStart = chunk * MDXNetDSP.STEP;
                 long inputStart = chunkStart - MDXNetDSP.BORDER;
@@ -813,6 +824,10 @@ public final class DJLEngine {
                 }
 
                 MDXNetDSP.createInput(left, right, tensorData, window, fft, dspWorkspace);
+                heartbeat.update("Menjalankan model ONNX",
+                        "Kim Vocal 2 sedang menghitung segmen " + currentChunk + " dari " + chunks + ".");
+                writeStatus(status, "jalan", completedPercent,
+                        "Menjalankan model ONNX", "Segmen " + currentChunk + " dari " + chunks);
                 try (OnnxTensor input = OnnxTensor.createTensor(
                             ortEnvironment, tensorData, expectedShape)) {
                     Map<String, OnnxTensor> feeds = new HashMap<>();
@@ -827,6 +842,8 @@ public final class DJLEngine {
                         if (values == null || values.remaining() != MDXNetDSP.TENSOR_SIZE) {
                             throw new IOException("Buffer output Kim Vocal 2 tidak lengkap");
                         }
+                        heartbeat.update("Merekonstruksi audio",
+                                "Menyusun kembali sinyal vokal dan instrumental untuk segmen " + currentChunk + ".");
                         MDXNetDSP.synthesize(values, 0, vocalLeft, window, envelope, fft,
                                 () -> checkCancelled(cancel), dspWorkspace);
                         MDXNetDSP.synthesize(values, 1, vocalRight, window, envelope, fft,
