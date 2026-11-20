@@ -104,6 +104,8 @@ jobs:
           readelf -h dist/libonnxruntime.so | grep -E 'Class:|Machine:' | grep -q AArch64
           readelf -h dist/libonnxruntime4j_jni.so | grep -E 'Class:|Machine:' | grep -q AArch64
           sha256sum dist/libdjl64.so dist/libonnxruntime.so dist/libonnxruntime4j_jni.so dist/DJLEngine.dex | tee dist/SHA256SUMS.txt
+          git rev-parse HEAD | tee dist/SOURCE_COMMIT.txt
+          sha256sum main.lua bridge/lua/DJLBridge.lua bridge/java/DJLEngine.java | tee dist/SOURCE_SHA256SUMS.txt
           cat > dist/BUILD_INFO.txt <<'EOF'
           Product: Jieshuo/CSR Vocal Remover
           ABI: arm64-v8a
@@ -116,7 +118,10 @@ jobs:
           DSP: Java Bluestein FFT, MDX STFT/iSTFT, 25-percent Hann weighted overlap-add
           Status: integration candidate; device audio-quality and accessibility tests still required
           EOF
-          (cd dist && zip -q -r Vocal_Remover_Kim_Vocal_2_CSR_TEST.ppk main.lua DJLEngine.dex libdjl64.so libonnxruntime.so libonnxruntime4j_jni.so bridge/lua/DJLBridge.lua licenses BUILD_INFO.txt SHA256SUMS.txt)
+          echo "Source commit: $(git rev-parse HEAD)" >> dist/BUILD_INFO.txt
+          (cd dist && zip -q -r Vocal_Remover_Kim_Vocal_2_CSR_TEST.ppk main.lua DJLEngine.dex libdjl64.so libonnxruntime.so libonnxruntime4j_jni.so bridge/lua/DJLBridge.lua licenses BUILD_INFO.txt SHA256SUMS.txt SOURCE_COMMIT.txt SOURCE_SHA256SUMS.txt)
+          test "$(unzip -p dist/Vocal_Remover_Kim_Vocal_2_CSR_TEST.ppk main.lua | sha256sum | cut -d' ' -f1)" = "$(sha256sum main.lua | cut -d' ' -f1)"
+          test "$(unzip -p dist/Vocal_Remover_Kim_Vocal_2_CSR_TEST.ppk bridge/lua/DJLBridge.lua | sha256sum | cut -d' ' -f1)" = "$(sha256sum bridge/lua/DJLBridge.lua | cut -d' ' -f1)"
           unzip -t dist/Vocal_Remover_Kim_Vocal_2_CSR_TEST.ppk
           unzip -l dist/Vocal_Remover_Kim_Vocal_2_CSR_TEST.ppk
 
