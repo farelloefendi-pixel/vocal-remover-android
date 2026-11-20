@@ -127,7 +127,6 @@ function M.siapkan()
   local properties = System.getProperties()
   local cacheKey = "vocalremover.kimmdx.ort131.v6"
   local kunciLama = {
-    "vocalremover.kimmdx.ort131.v6",
     "vocalremover.kimmdx.ort131.v5",
     "vocalremover.kimmdx.ort131.v4",
     "vocalremover.kimmdx.ort131.v3",
@@ -136,12 +135,8 @@ function M.siapkan()
   }
   for _, kunci in ipairs(kunciLama) do
     local tersedia = properties.get(kunci)
-    if tersedia ~= nil and tostring(tersedia) ~= "LOADING" then
-      kelas = tersedia
-      if kunci ~= cacheKey then
-        pcall(function() properties.put(cacheKey, tersedia) end)
-      end
-      return kelas
+    if tersedia ~= nil then
+      return nil, "Mesin Vocal Remover versi sebelumnya masih aktif di Jieshuo. Tutup paksa Jieshuo melalui Pengaturan Android, lalu buka kembali ekstensi agar mesin terbaru dimuat satu kali."
     end
   end
 
