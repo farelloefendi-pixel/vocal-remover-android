@@ -173,57 +173,96 @@ public final class DJLEngine {
                 throw new IOException("Folder model tidak bisa dibuat");
             }
             temporary.delete();
-            connection = (HttpURLConnection) new URL(url).openConnection();
-            connection.setInstanceFollowRedirects(true);
-            connection.setConnectTimeout(20000);
-            connection.setReadTimeout(30000);
-            connection.setRequestProperty("User-Agent", "VocalRemover-CSR/1.0");
-            connection.connect();
-            int code = connection.getResponseCode();
-            if (code < 200 || code >= 300) {
-                throw new IOException("Server model memberi HTTP " + code);
-            }
-            long expected = connection.getContentLengthLong();
-            long received = 0;
-            long lastWrite = 0;
-            try (InputStream input = connection.getInputStream();
-                 BufferedOutputStream output = new BufferedOutputStream(
-                         new FileOutputStream(temporary, false), 1024 * 1024)) {
-                byte[] buffer = new byte[1024 * 1024];
-                int count;
-                while ((count = input.read(buffer)) != -1) {
+            IOException kegagalanTerakhir = null;
+            for (int percobaan = 1; percobaan <= 3; percobaan++) {
+                connection = (HttpURLConnection) new URL(url).openConnection();
+                try {
+                    connection.setInstanceFollowRedirects(true);
+                    connection.setConnectTimeout(45000);
+                    connection.setReadTimeout(90000);
+                    connection.setRequestProperty("User-Agent", "VocalRemover-CSR/1.0");
+                    connection.setRequestProperty("Accept", "application/octet-stream");
+                    connection.setRequestProperty("Accept-Encoding", "identity");
+                    connection.connect();
+                    int code = connection.getResponseCode();
+                    if (code < 200 || code >= 300) {
+                        throw new IOException("Server model memberi HTTP " + code
+                                + " " + connection.getResponseMessage());
+                    }
+                    long expected = connection.getContentLengthLong();
+                    if (expected <= 0) {
+                        expected = connection.getHeaderFieldLong("X-Linked-Size", -1L);
+                    }
+                    long received = 0;
+                    long lastWrite = 0;
+                    temporary.delete();
+                    try (InputStream input = connection.getInputStream();
+                         BufferedOutputStream output = new BufferedOutputStream(
+                                 new FileOutputStream(temporary, false), 1024 * 1024)) {
+                        byte[] buffer = new byte[1024 * 1024];
+                        int count;
+                        while ((count = input.read(buffer)) != -1) {
+                            if (CANCEL_DOWNLOAD.get()) {
+                                throw new CancellationException("Pengunduhan model dibatalkan");
+                            }
+                            output.write(buffer, 0, count);
+                            received += count;
+                            long now = System.currentTimeMillis();
+                            if (now - lastWrite >= 500) {
+                                int percent = expected > 0
+                                        ? (int) Math.min(99, received * 100L / expected) : 0;
+                                String detail = expected > 0
+                                        ? (received / 1048576L) + " dari " + (expected / 1048576L) + " MB"
+                                        : (received / 1048576L) + " MB diterima";
+                                writeStatus(new File(statusPath), "jalan", percent,
+                                        "Mengunduh model", detail);
+                                lastWrite = now;
+                            }
+                        }
+                        output.flush();
+                    }
                     if (CANCEL_DOWNLOAD.get()) {
                         throw new CancellationException("Pengunduhan model dibatalkan");
                     }
-                    output.write(buffer, 0, count);
-                    received += count;
-                    long now = System.currentTimeMillis();
-                    if (now - lastWrite >= 500) {
-                        int percent = expected > 0
-                                ? (int) Math.min(99, received * 100L / expected) : 0;
-                        String detail = expected > 0
-                                ? (received / 1048576L) + " dari " + (expected / 1048576L) + " MB"
-                                : (received / 1048576L) + " MB diterima";
-                        writeStatus(new File(statusPath), "jalan", percent,
-                                "Mengunduh model", detail);
-                        lastWrite = now;
+                    if (expected > 0 && received != expected) {
+                        throw new IOException("Unduhan tidak lengkap: diterima "
+                                + received + " dari " + expected + " byte");
+                    }
+                    writeStatus(new File(statusPath), "jalan", 99,
+                            "Memeriksa model", "Memverifikasi SHA-256");
+                    verifyModel(temporary.getAbsolutePath());
+                    Os.rename(temporary.getAbsolutePath(), target.getAbsolutePath());
+                    verifiedModelPath = target.getAbsolutePath();
+                    verifiedModelLength = target.length();
+                    verifiedModelModified = target.lastModified();
+                    writeStatus(new File(statusPath), "selesai", 100,
+                            "Model siap", "Model berhasil diunduh dan diverifikasi");
+                    return "OK|Model berhasil diunduh dan diverifikasi";
+                } catch (CancellationException error) {
+                    throw error;
+                } catch (Throwable error) {
+                    temporary.delete();
+                    kegagalanTerakhir = new IOException(message(error), error);
+                    if (percobaan >= 3) throw kegagalanTerakhir;
+                    writeStatus(new File(statusPath), "jalan", 0,
+                            "Koneksi terputus, mencoba lagi",
+                            "Percobaan " + percobaan + " dari 3: " + message(error));
+                    try {
+                        Thread.sleep(1500L * percobaan);
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                        throw new IOException("Pengunduhan terhenti saat menunggu percobaan ulang", interrupted);
+                    }
+                } finally {
+                    if (connection != null) {
+                        try { connection.disconnect(); } catch (Exception ignored) { }
+                        connection = null;
                     }
                 }
-                output.flush();
             }
-            if (CANCEL_DOWNLOAD.get()) {
-                throw new CancellationException("Pengunduhan model dibatalkan");
-            }
-            writeStatus(new File(statusPath), "jalan", 99,
-                    "Memeriksa model", "Memverifikasi SHA-256");
-            verifyModel(temporary.getAbsolutePath());
-            Os.rename(temporary.getAbsolutePath(), target.getAbsolutePath());
-            verifiedModelPath = target.getAbsolutePath();
-            verifiedModelLength = target.length();
-            verifiedModelModified = target.lastModified();
-            writeStatus(new File(statusPath), "selesai", 100,
-                    "Model siap", "Model berhasil diunduh dan diverifikasi");
-            return "OK|Model berhasil diunduh dan diverifikasi";
+            throw kegagalanTerakhir == null
+                    ? new IOException("Pengunduhan model gagal tanpa keterangan server")
+                    : kegagalanTerakhir;
         } catch (CancellationException error) {
             temporary.delete();
             writeStatus(new File(statusPath), "batal", 0,
