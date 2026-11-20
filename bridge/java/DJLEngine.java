@@ -56,7 +56,8 @@ public final class DJLEngine {
     private static native void nativeCancel();
 
     
-    public static synchronized String muat(String soPath, String ortDirectory) {
+    public static synchronized String muat(
+            String soPath, String ortDirectory, String modelDirectory) {
         try {
             if (soPath == null || soPath.length() == 0) {
                 return "GALAT|Lokasi pustaka native kosong";
@@ -65,12 +66,23 @@ public final class DJLEngine {
                 System.load(soPath);
                 libraryLoaded = true;
             }
-            File so = new File(soPath);
-            File parent = so.getParentFile();
-            if (parent == null) {
-                return "GALAT|Folder mesin tidak ditemukan";
+            if (modelDirectory == null || modelDirectory.length() == 0) {
+                return "GALAT|Folder penyimpanan model belum ditentukan";
             }
-            modelPath = new File(parent, "Kim_Vocal_2.onnx").getAbsolutePath();
+            File modelFolder = new File(modelDirectory);
+            if (!modelFolder.isDirectory() && !modelFolder.mkdirs()) {
+                return "GALAT|Folder Vocal Remover tidak dapat dibuat. Periksa izin akses semua file untuk Jieshuo.";
+            }
+            File writeCheck = new File(modelFolder, ".vocal_remover_write_" + System.nanoTime());
+            try (FileOutputStream check = new FileOutputStream(writeCheck, false)) {
+                check.write(1);
+                check.flush();
+            } catch (Throwable denied) {
+                return "GALAT|Jieshuo belum memiliki izin menulis ke /storage/emulated/0/解说/Plugin/Vocal Remover. Aktifkan izin akses semua file, lalu buka ulang ekstensi.";
+            } finally {
+                try { writeCheck.delete(); } catch (Throwable ignored) { }
+            }
+            modelPath = new File(modelFolder, "Kim_Vocal_2.onnx").getAbsolutePath();
             if (ortDirectory == null || ortDirectory.length() == 0) {
                 return "GALAT|Folder pustaka ONNX Runtime kosong";
             }
