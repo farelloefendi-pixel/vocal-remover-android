@@ -471,23 +471,58 @@ pantau = function(id, path)
   tunda(250, periksa)
 end
 
-pilihAudio = function(path)
-  if not path then
-    local root = File("/storage")
-    local volumes = root.listFiles()
-    local pilihan = { { label = "Penyimpanan internal", path = "/storage/emulated/0" } }
-    if volumes ~= nil then
-      for i = 0, panjangLarik(volumes) - 1 do
-        local volume = volumes[i]
-        local namaVolume = tostring(volume.getName())
-        if volume.isDirectory() and namaVolume ~= "emulated" and namaVolume ~= "self" then
-          pilihan[#pilihan + 1] = {
-            label = "Kartu SD, " .. namaVolume,
-            path = tostring(volume.getAbsolutePath())
-          }
+local function daftarPenyimpanan()
+  local pilihan = {
+    { label = "Penyimpanan internal", path = "/storage/emulated/0" }
+  }
+  local sudah = { ["/storage/emulated/0"] = true }
+  local function tambahVolume(path, label)
+    if not path or path == "" then return end
+    local f = File(path)
+    local absolut = tostring(f.getAbsolutePath())
+    if sudah[absolut] or not f.exists() or not f.isDirectory() then return end
+    sudah[absolut] = true
+    pilihan[#pilihan + 1] = {
+      label = label or ("Penyimpanan tambahan, " .. tostring(f.getName())),
+      path = absolut
+    }
+  end
+  pcall(function()
+    local StorageManager = luajava.bindClass("android.os.storage.StorageManager")
+    local manager = ctx.getSystemService(ctx.STORAGE_SERVICE)
+    local volumes = manager.getStorageVolumes()
+    for i = 0, panjangLarik(volumes) - 1 do
+      local volume = volumes.get(i)
+      if volume and volume.isRemovable() then
+        local directory = volume.getDirectory()
+        if directory then
+          tambahVolume(tostring(directory.getAbsolutePath()),
+            "Kartu SD, " .. tostring(volume.getDescription(ctx)))
         end
       end
     end
+  end)
+  if #pilihan == 1 then
+    pcall(function()
+      local root = File("/storage")
+      local volumes = root.listFiles()
+      if volumes ~= nil then
+        for i = 0, panjangLarik(volumes) - 1 do
+          local volume = volumes[i]
+          local nama = tostring(volume.getName())
+          if volume.isDirectory() and nama ~= "emulated" and nama ~= "self" then
+            tambahVolume(tostring(volume.getAbsolutePath()), "Kartu SD, " .. nama)
+          end
+        end
+      end
+    end)
+  end
+  return pilihan
+end
+
+pilihAudio = function(path)
+  if not path then
+    local pilihan = daftarPenyimpanan()
     local labels = {}
     for i, item in ipairs(pilihan) do labels[i] = item.label end
     layarDaftar("Pilih lokasi lagu", labels, function(i)
