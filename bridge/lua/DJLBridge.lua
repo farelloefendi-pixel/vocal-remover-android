@@ -126,6 +126,25 @@ function M.siapkan()
   if not ctx then return nil, "Context CSR belum diinisialisasi" end
   local properties = System.getProperties()
   local cacheKey = "vocalremover.kimmdx.ort131.v6"
+  local kunciLama = {
+    "vocalremover.kimmdx.ort131.v6",
+    "vocalremover.kimmdx.ort131.v5",
+    "vocalremover.kimmdx.ort131.v4",
+    "vocalremover.kimmdx.ort131.v3",
+    "vocalremover.kimmdx.ort131.v2",
+    "vocalremover.kimmdx.ort131.v1"
+  }
+  for _, kunci in ipairs(kunciLama) do
+    local tersedia = properties.get(kunci)
+    if tersedia ~= nil and tostring(tersedia) ~= "LOADING" then
+      kelas = tersedia
+      if kunci ~= cacheKey then
+        pcall(function() properties.put(cacheKey, tersedia) end)
+      end
+      return kelas
+    end
+  end
+
   local tersimpan = properties.get(cacheKey)
   if tersimpan ~= nil and tostring(tersimpan) ~= "LOADING" then
     kelas = tersimpan
