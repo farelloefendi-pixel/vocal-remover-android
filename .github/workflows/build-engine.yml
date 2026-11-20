@@ -119,6 +119,7 @@ jobs:
           Status: integration candidate; device audio-quality and accessibility tests still required
           EOF
           echo "Source commit: $(git rev-parse HEAD)" >> dist/BUILD_INFO.txt
+          rm -f dist/Vocal_Remover_Kim_Vocal_2_CSR_TEST.ppk
           (cd dist && zip -q -r Vocal_Remover_Kim_Vocal_2_CSR_TEST.ppk main.lua DJLEngine.dex libdjl64.so libonnxruntime.so libonnxruntime4j_jni.so bridge/lua/DJLBridge.lua licenses BUILD_INFO.txt SHA256SUMS.txt SOURCE_COMMIT.txt SOURCE_SHA256SUMS.txt)
           test "$(unzip -p dist/Vocal_Remover_Kim_Vocal_2_CSR_TEST.ppk main.lua | sha256sum | cut -d' ' -f1)" = "$(sha256sum main.lua | cut -d' ' -f1)"
           test "$(unzip -p dist/Vocal_Remover_Kim_Vocal_2_CSR_TEST.ppk bridge/lua/DJLBridge.lua | sha256sum | cut -d' ' -f1)" = "$(sha256sum bridge/lua/DJLBridge.lua | cut -d' ' -f1)"
