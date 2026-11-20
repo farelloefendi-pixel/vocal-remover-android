@@ -693,7 +693,9 @@ public final class DJLEngine {
                         / MDXNetDSP.STEP) + 1L;
 
         OrtSession.SessionOptions options = new OrtSession.SessionOptions();
-        options.setIntraOpNumThreads(2);
+        int availableCores = Runtime.getRuntime().availableProcessors();
+        int inferenceThreads = Math.max(2, Math.min(4, availableCores - 1));
+        options.setIntraOpNumThreads(inferenceThreads);
         options.setInterOpNumThreads(1);
         options.setMemoryPatternOptimization(true);
         options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
