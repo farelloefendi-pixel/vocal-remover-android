@@ -2,6 +2,7 @@ local M = {}
 
 local MODEL_URL = "https://huggingface.co/aaatmy/uvr-mdx-net-onnx/resolve/main/Kim_Vocal_2.onnx"
 local MODEL_ENABLED = true
+local MODEL_DIRECTORY = "/storage/emulated/0/解说/Plugin/Vocal Remover"
 local MODEL_STATUS = "model_status.txt"
 local ACTIVE_FILE = "aktif.txt"
 
@@ -124,7 +125,7 @@ end
 function M.siapkan()
   if not ctx then return nil, "Context CSR belum diinisialisasi" end
   local properties = System.getProperties()
-  local cacheKey = "vocalremover.kimmdx.ort131.v5"
+  local cacheKey = "vocalremover.kimmdx.ort131.v6"
   local tersimpan = properties.get(cacheKey)
   if tersimpan ~= nil and tostring(tersimpan) ~= "LOADING" then
     kelas = tersimpan
@@ -202,7 +203,7 @@ function M.siapkan()
     local pemuat = luajava.bindClass("dalvik.system.DexClassLoader")(
       dexTujuan, folder .. "/odex", ortFolder, ctx.getClassLoader())
     local hasilKelas = pemuat.loadClass("DJLEngine")
-    local hasilMuat = M.panggil(hasilKelas, "muat", 2, { soTujuan, ortFolder })
+    local hasilMuat = M.panggil(hasilKelas, "muat", 3, { soTujuan, ortFolder, MODEL_DIRECTORY })
     if string.sub(hasilMuat, 1, 2) ~= "OK" then
       return nil, "Mesin C++ tidak bisa dimuat: "
         .. tostring(string.match(hasilMuat, "|(.*)") or hasilMuat)
