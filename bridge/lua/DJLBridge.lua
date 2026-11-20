@@ -278,9 +278,11 @@ function M.unduhModel()
       end)
       local hasilTeks = tostring(hasil or "")
       if not ok or string.sub(hasilTeks, 1, 5) == "GALAT" then
+        local sebab = string.match(hasilTeks, "^GALAT|(.*)$") or hasilTeks
+        sebab = tostring(sebab):gsub("|", "/"):gsub("[\r\n]", " ")
         local f = io.open(statusUnduh, "wb")
         if f then
-          f:write("galat|0|Unduhan model gagal|" .. hasilTeks .. "|" .. tostring(os.time() * 1000))
+          f:write("galat|0|Unduhan model gagal|" .. sebab .. "|" .. tostring(os.time() * 1000))
           f:close()
         end
       elseif string.sub(hasilTeks, 1, 2) == "OK" then
