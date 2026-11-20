@@ -31,9 +31,24 @@ jobs:
       - name: Fetch ONNX Runtime Android AAR
         run: |
           mkdir -p build-ort
-          curl --fail --location --retry 3 \
-            https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.31.1/onnxruntime-android-1.31.1.aar \
-            --output build-ort/onnxruntime-android.aar
+          AAR_PATH=build-ort/onnxruntime-android.aar
+          AAR_BASE=https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.31.1/onnxruntime-android-1.31.1.aar
+          AAR_MIRRORS=(
+            "$AAR_BASE"
+            "https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.31.1/onnxruntime-android-1.31.1.aar"
+            "https://maven-central.storage-download.googleapis.com/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.31.1/onnxruntime-android-1.31.1.aar"
+          )
+          downloaded=false
+          for url in "${AAR_MIRRORS[@]}"; do
+            rm -f "$AAR_PATH.tmp"
+            if curl --fail --location --retry 2 --connect-timeout 20 --max-time 300 "$url" --output "$AAR_PATH.tmp" && unzip -tq "$AAR_PATH.tmp"; then
+              mv "$AAR_PATH.tmp" "$AAR_PATH"
+              downloaded=true
+              break
+            fi
+          done
+          test "$downloaded" = true
+          test -s "$AAR_PATH"
           mkdir -p build-ort/unpacked
           unzip -q build-ort/onnxruntime-android.aar -d build-ort/unpacked
           test -s build-ort/unpacked/classes.jar
