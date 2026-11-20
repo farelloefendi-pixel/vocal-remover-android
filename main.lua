@@ -333,22 +333,28 @@ statusDialogModel = function(pathLagu)
 end
 
 mulaiUnduhModel = function(pathLagu)
-  local ok, pesan = Bridge.unduhModel()
-  if not ok then
-    dialogPesan("Unduhan tidak dimulai", tostring(pesan), {
-      { "Tutup", function() menuUtama() end }
-    })
+  if unduhPantau then
+    toast("Pengunduhan model sedang berjalan")
     return
   end
   unduhPantau = true
   local d = dialogBaru("Mengunduh model")
-  d.setMessage("Menyiapkan unduhan model...")
+  d.setMessage("Menyiapkan mesin. Jendela ini akan tetap terbuka selama proses berlangsung.")
   d.setCancelable(false)
   d.setButton("Batalkan", function()
     Bridge.batalUnduhModel()
     d.setMessage("Meminta pembatalan unduhan...")
   end)
   bukaDialog(d)
+  tunda(80, function()
+    local ok, pesan = Bridge.unduhModel()
+    if not ok then
+      unduhPantau = false
+      dialogPesan("Unduhan tidak dimulai", tostring(pesan), {
+        { "Tutup", function() menuUtama() end }
+      }, function() menuUtama() end)
+    end
+  end)
   local teksLama = ""
   local tahapLama = nil
   local function periksa()
