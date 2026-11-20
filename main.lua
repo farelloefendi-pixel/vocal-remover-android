@@ -296,18 +296,40 @@ putar = function(path, nama)
 end
 
 statusDialogModel = function(pathLagu)
-  local siap, pesan = Bridge.modelSiap()
-  if siap then
-    if pathLagu then mulaiPemisahan(pathLagu) else menuUtama() end
-    return
-  end
-  dialogPesan("Model Kim Vocal 2 belum tersedia",
-    "Untuk pemisahan offline, ekstensi memerlukan model Kim Vocal 2 ONNX sekitar 67 MB. Unduh model satu kali dengan koneksi internet. Berkas akan diperiksa checksum SHA-256 sebelum digunakan. Pesan: "
-      .. tostring(pesan),
-    {
-      { "Unduh model", function() mulaiUnduhModel(pathLagu) end },
-      { "Kembali ke menu", function() menuUtama() end }
-    }, function() menuUtama() end)
+  local token = {}
+  DJL.pemeriksaanModel = token
+  dialogPesan("Memeriksa model", "Sebentar, sedang memeriksa kesiapan mesin dan model.", {
+    { "Batal", function()
+      if DJL.pemeriksaanModel == token then DJL.pemeriksaanModel = nil end
+      menuUtama()
+    end }
+  }, function()
+    if DJL.pemeriksaanModel == token then DJL.pemeriksaanModel = nil end
+    menuUtama()
+  end)
+  Thread(Runnable({
+    run = function()
+      local ok, siap, pesan = pcall(function() return Bridge.modelSiap() end)
+      ui.post(Runnable({
+        run = function()
+          if DJL.pemeriksaanModel ~= token then return end
+          DJL.pemeriksaanModel = nil
+          if ok and siap then
+            tutupDialog()
+            if pathLagu then mulaiPemisahan(pathLagu) else menuUtama() end
+            return
+          end
+          local sebab = ok and pesan or siap
+          dialogPesan("Model Kim Vocal 2 belum tersedia",
+            "Untuk pemisahan offline, model perlu diunduh satu kali dengan koneksi internet. Setelah tersedia, lagu dapat dipisahkan tanpa koneksi internet.",
+            {
+              { "Unduh model", function() mulaiUnduhModel(pathLagu) end },
+              { "Kembali ke menu", function() menuUtama() end }
+            }, function() menuUtama() end)
+        end
+      }))
+    end
+  })).start()
 end
 
 mulaiUnduhModel = function(pathLagu)
@@ -520,30 +542,60 @@ pilihAudio = function(path)
 end
 
 local function menuStatus()
-  local ok, info = Bridge.statusMesin()
-  local siap, model = Bridge.modelSiap()
-  local teks = siap and "Model sudah tersedia. Kamu bisa langsung memilih lagu dan memisahkannya tanpa koneksi internet."
-    or "Model belum tersedia. Unduh model sekali dengan koneksi internet agar bisa digunakan untuk pemisahan audio."
-  local tombol = {}
-  if not siap then
-    tombol[#tombol + 1] = { "Unduh model Kim Vocal 2", function() mulaiUnduhModel(nil) end }
-  end
-  tombol[#tombol + 1] = { "Hapus model Kim Vocal 2", function()
-    dialogPesan("Konfirmasi penghapusan model",
-      "Hapus model Kim Vocal 2 dari penyimpanan? Jika dihapus, kamu perlu mengunduhnya lagi sebelum memisahkan audio. Hasil pemisahan yang sudah tersimpan tetap aman.",
-      {
-        { "Hapus model", function()
-          local berhasil, pesanHapus = Bridge.hapusModel()
-          dialogPesan(berhasil and "Model berhasil dihapus" or "Penghapusan gagal",
-            tostring(pesanHapus),
-            { { "Kembali", function() menuStatus() end } },
-            function() menuStatus() end)
-        end },
-        { "Batal", function() menuStatus() end }
-      }, function() menuStatus() end)
-  end }
-  tombol[#tombol + 1] = { "Kembali", function() menuUtama() end }
-  dialogPesan("Status mesin dan model", teks, tombol, function() menuUtama() end)
+  local token = {}
+  DJL.pemeriksaanStatus = token
+  dialogPesan("Memeriksa status", "Sebentar, sedang memeriksa kesiapan model.", {
+    { "Batal", function()
+      if DJL.pemeriksaanStatus == token then DJL.pemeriksaanStatus = nil end
+      menuUtama()
+    end }
+  }, function()
+    if DJL.pemeriksaanStatus == token then DJL.pemeriksaanStatus = nil end
+    menuUtama()
+  end)
+  Thread(Runnable({
+    run = function()
+      local ok, siap, model = pcall(function() return Bridge.modelSiap() end)
+      ui.post(Runnable({
+        run = function()
+          if DJL.pemeriksaanStatus ~= token then return end
+          DJL.pemeriksaanStatus = nil
+          local teks = ok and siap
+            and "Model sudah tersedia. Kamu bisa langsung memilih lagu dan memisahkannya tanpa koneksi internet."
+            or "Model belum tersedia. Unduh model sekali dengan koneksi internet agar bisa digunakan untuk pemisahan audio."
+          local tombol = {}
+          if not (ok and siap) then
+            tombol[#tombol + 1] = { "Unduh model Kim Vocal 2", function() mulaiUnduhModel(nil) end }
+          end
+          tombol[#tombol + 1] = { "Hapus model Kim Vocal 2", function()
+            dialogPesan("Konfirmasi penghapusan model",
+              "Hapus model Kim Vocal 2 dari penyimpanan? Jika dihapus, kamu perlu mengunduhnya lagi sebelum memisahkan audio. Hasil pemisahan yang sudah tersimpan tetap aman.",
+              {
+                { "Hapus model", function()
+                  Thread(Runnable({
+                    run = function()
+                      local okHapus, berhasil, pesanHapus = pcall(function() return Bridge.hapusModel() end)
+                      ui.post(Runnable({
+                        run = function()
+                          dialogPesan(berhasil and okHapus and "Model berhasil dihapus" or "Penghapusan gagal",
+                            tostring(okHapus and pesanHapus or berhasil),
+                            { { "Kembali", function() menuStatus() end } },
+                            function() menuStatus() end)
+                        end
+                      }))
+                    end
+                  })).start()
+                  dialogPesan("Menghapus model", "Sedang menghapus berkas model. Mohon tunggu.", {})
+                end },
+                { "Batal", function() menuStatus() end }
+              }, function() menuStatus() end)
+          end }
+          tombol[#tombol + 1] = { "Kembali", function() menuUtama() end }
+          dialogPesan("Status mesin dan model", teks, tombol, function() menuUtama() end)
+        end
+      }))
+    end
+  })).start()
 end
 
 menuUtama = function()
