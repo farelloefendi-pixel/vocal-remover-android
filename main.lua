@@ -376,9 +376,21 @@ mulaiUnduhModel = function(pathLagu)
         toast("Model berhasil diunduh dan diverifikasi")
         if pathLagu then mulaiPemisahan(pathLagu) else menuUtama() end
         return
-      elseif s.state == "galat" or s.state == "batal" then
+      elseif s.state == "galat" then
         unduhPantau = false
-        dialogPesan("Unduhan model " .. s.state, tostring(s.pesan), {
+        tutupDialog()
+        dialogPesan("Unduhan model gagal",
+          tostring(s.pesan or "Penyebab kesalahan tidak diketahui"),
+          {
+            { "Coba lagi", function() mulaiUnduhModel(pathLagu) end },
+            { "Tutup", function() menuUtama() end }
+          }, function() menuUtama() end)
+        return
+      elseif s.state == "batal" then
+        unduhPantau = false
+        tutupDialog()
+        dialogPesan("Unduhan dibatalkan", tostring(s.pesan or "Pengunduhan dihentikan"), {
+          { "Coba lagi", function() mulaiUnduhModel(pathLagu) end },
           { "Tutup", function() menuUtama() end }
         }, function() menuUtama() end)
         return
