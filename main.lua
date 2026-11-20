@@ -20,7 +20,7 @@ import "java.lang.Runnable"
 local ctx = activity or service or this
 local ui = Handler(Looper.getMainLooper())
 local File = luajava.bindClass("java.io.File")
-local NAMA = "Vocal Remover CSR - Development"
+local NAMA = "Vocal Remover"
 local EKSTENSI = {
   mp3 = true, m4a = true, aac = true, wav = true,
   flac = true, ogg = true, opus = true
@@ -432,7 +432,31 @@ pantau = function(id, path)
 end
 
 pilihAudio = function(path)
-  path = path or "/storage/emulated/0"
+  if not path then
+    local root = File("/storage")
+    local volumes = root.listFiles()
+    local pilihan = { { label = "Penyimpanan internal", path = "/storage/emulated/0" } }
+    if volumes ~= nil then
+      for i = 0, panjangLarik(volumes) - 1 do
+        local volume = volumes[i]
+        local namaVolume = tostring(volume.getName())
+        if volume.isDirectory() and namaVolume ~= "emulated" and namaVolume ~= "self" then
+          pilihan[#pilihan + 1] = {
+            label = "Kartu SD, " .. namaVolume,
+            path = tostring(volume.getAbsolutePath())
+          }
+        end
+      end
+    end
+    local labels = {}
+    for i, item in ipairs(pilihan) do labels[i] = item.label end
+    layarDaftar("Pilih lokasi lagu", labels, function(i)
+      local item = pilihan[i]
+      if item then pilihAudio(item.path) end
+    end, function() menuUtama() end,
+    T("Pilih penyimpanan tempat lagu berada.", 14))
+    return
+  end
   local folder = File(path)
   if not folder.exists() then
     dialogPesan("Folder tidak ditemukan", path, {
@@ -498,16 +522,15 @@ end
 local function menuStatus()
   local ok, info = Bridge.statusMesin()
   local siap, model = Bridge.modelSiap()
-  local teks = tostring(info) .. "\n\nStatus model: "
-    .. (siap and "siap" or tostring(model))
-    .. "\n\nModel Kim Vocal 2 harus lulus verifikasi SHA-256 sebelum pemisahan. Setelah terunduh, pemrosesan berjalan offline."
+  local teks = siap and "Model sudah tersedia. Kamu bisa langsung memilih lagu dan memisahkannya tanpa koneksi internet."
+    or "Model belum tersedia. Unduh model sekali dengan koneksi internet agar bisa digunakan untuk pemisahan audio."
   local tombol = {}
   if not siap then
     tombol[#tombol + 1] = { "Unduh model Kim Vocal 2", function() mulaiUnduhModel(nil) end }
   end
   tombol[#tombol + 1] = { "Hapus model Kim Vocal 2", function()
     dialogPesan("Konfirmasi penghapusan model",
-      "Hapus permanen Kim_Vocal_2.onnx dari folder internal ekstensi beserta berkas unduhan sementara? Mesin C++, ONNX Runtime, hasil vocals.wav, dan instrumental.wav tidak akan dihapus. Untuk memakai pemisahan lagi, model perlu diunduh kembali.",
+      "Hapus model Kim Vocal 2 dari penyimpanan? Jika dihapus, kamu perlu mengunduhnya lagi sebelum memisahkan audio. Hasil pemisahan yang sudah tersimpan tetap aman.",
       {
         { "Hapus model", function()
           local berhasil, pesanHapus = Bridge.hapusModel()
@@ -525,10 +548,10 @@ end
 
 menuUtama = function()
   local butir = {
-    "Pilih audio untuk dipisahkan",
-    "Lihat hasil vokal dan instrumental terakhir",
-    "Status mesin dan model",
-    "Pengaturan dan informasi",
+    "Pilih lagu",
+    "Lihat hasil pemisahan terakhir",
+    "Status model",
+    "Tentang Vocal Remover",
     "Tutup"
   }
   layarDaftar(NAMA, butir, function(i)
@@ -544,8 +567,8 @@ menuUtama = function()
     elseif i == 3 then
       menuStatus()
     elseif i == 4 then
-      dialogPesan("Tentang Vocal Remover CSR",
-        "Ekstensi CSR untuk pemisahan audio offline menggunakan Kim Vocal 2 MDX-Net ONNX. Hasil hanya vocals.wav dan instrumental.wav. Model diunduh satu kali, diverifikasi, lalu diproses offline. Proses berjalan di worker agar UI dan pembaca layar tetap responsif.",
+      dialogPesan("Tentang Vocal Remover",
+        "Vocal Remover membantu memisahkan lagu menjadi dua berkas: vokal dan instrumental.\n\nCara menggunakan:\n1. Pilih lagu dari penyimpanan internal atau kartu SD.\n2. Jika baru pertama kali, unduh model dengan koneksi internet.\n3. Tunggu proses pemisahan selesai.\n4. Buka hasil untuk mendengarkan atau menyalin lokasi kedua berkas.\n\nKelebihan:\n• Pemisahan berjalan langsung di perangkat setelah model tersedia.\n• Tidak perlu mengunggah lagu ke layanan online.\n• Hasil tersedia dalam format WAV.\n• Model hanya perlu diunduh satu kali dan dapat dihapus jika ruang penyimpanan dibutuhkan.\n\nKualitas hasil bergantung pada karakteristik lagu dan proses pemisahan.",
         { { "Kembali", function() menuUtama() end } }, function() menuUtama() end)
     else
       tutupDialog()
